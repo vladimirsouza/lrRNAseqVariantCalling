@@ -35,14 +35,14 @@ library(variantCallingFromIsoSeq)
 OUTPUT_DIR <- "/home/vbarbo/project_2021/scripts/paper_1/all_figures_2021.12.28"
 
 # load object mt_jurkat_allMethods_notFiltered
-load("/home/vbarbo/project_2021/projects/iso-seq_variant_calling/scripts_for_all_analyses_in_the_paper/3_creating_master_table/jurkat/mt_jurkat_allMethods_notFiltered_v6.RData")
+load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/jurkat/mt_jurkat_allMethods_notFiltered_v6.RData")
 # load object mt_wtc11_allMethods_notFiltered
-load("/home/vbarbo/project_2021/projects/iso-seq_variant_calling/scripts_for_all_analyses_in_the_paper/3_creating_master_table/wct11/mt_wtc11_allMethods_notFiltered_v6.RData")
+load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/wct11/mt_wtc11_allMethods_notFiltered_v6.RData")
 
 # load object mt_jurkat_allMethods_filtered
-load("/home/vbarbo/project_2021/projects/iso-seq_variant_calling/scripts_for_all_analyses_in_the_paper/3_creating_master_table/jurkat/mt_jurkat_allMethods_filtered_v6.RData")
+load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/jurkat/mt_jurkat_allMethods_filtered_v6.RData")
 # load object mt_wtc11_allMethods_filtered
-load("/home/vbarbo/project_2021/projects/iso-seq_variant_calling/scripts_for_all_analyses_in_the_paper/3_creating_master_table/wct11/mt_wtc11_allMethods_filtered_v6.RData")
+load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/wct11/mt_wtc11_allMethods_filtered_v6.RData")
 ```
 
 
@@ -437,8 +437,15 @@ p_1e <- upset(
     c("Clair3-mix"),
     c("SNCR+fC+DV")
     # c('Outside of known sets')
-  )
-)
+  ),
+  name="",
+  wrap=TRUE
+) + 
+  ggtitle('Jurkat') +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=30)) +
+  NULL
+
 fp <- file.path(OUTPUT_DIR, "upsetPlot_bestMethods_jurkat.png")
 png(fp, width=800)
 p_1e
@@ -581,8 +588,15 @@ p_1f <- upset(
     c("Clair3-mix"),
     c("SNCR+fC+DV")
     # c('Outside of known sets')
-  )
-)
+  ),
+  name="",
+  wrap=TRUE
+) + 
+  ggtitle('WTC-11') +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=30)) +
+  NULL
+
 fp <- file.path(OUTPUT_DIR, "upsetPlot_bestMethods_wtc11.png")
 png(fp, width=800)
 p_1f
@@ -614,21 +628,36 @@ p_1f <- draw_image(k)
 p_1f <- ggdraw() + p_1f
 
 
+# ### give some space between figures
+# save(p_1a, p_1b, p_1c, p_1d, p_1e, p_1f, file="~/keita.RData")
+# load("~/keita.RData")
+# 
+# p_1a <- p_1a + theme(plot.margin = unit(c(3,3,3,3), "lines"))
+# p_1b <- p_1b + theme(plot.margin = unit(c(3,3,3,3), "lines"))
+# p_1c <- p_1c + theme(plot.margin = unit(c(3,3,3,3), "lines"))
+# p_1d <- p_1d + theme(plot.margin = unit(c(3,3,3,3), "lines"))
+# p_1e <- p_1e + theme(plot.margin = unit(c(3,3,3,3), "lines"))
+# p_1f <- p_1f + theme(plot.margin = unit(c(3,3,3,3), "lines"))
+
+
+
+
 # plots together
-p_bc <- plot_grid(p_1b, p_1c,
-                  labels=c("B", "C"), nrow=2, rel_heights=c(1,.6),
-                  label_size=20)
-p_abc <- plot_grid(p_1a, p_bc,
-                   labels=c("A", NULL), nrow=1, rel_widths=c(.9, 1),
-                   label_size=20)
+p_bc <- plot_grid(p_1b, NULL, p_1c,
+                  labels=c("B", "", "C"), ncol=1, rel_heights=c(1, .05, .6),
+                  label_size=28)
+p_abc <- plot_grid(p_1a, NULL, p_bc,
+                   labels=c("A"), nrow=1, rel_widths=c(1, .05, .95),
+                   label_size=28)
 p_ef <- plot_grid(p_1e, p_1f, 
-                  labels=c("E", "F"), nrow=2, rel_heights=c(1,1),
-                  label_size=20)
-p_def <- plot_grid(p_1d, p_ef,
-                   labels=c("D", NULL), nrow=1, rel_widths=c(1, 1),
-                   label_size=20)
-p_1 <- plot_grid(p_abc, p_def, labels=c(NULL), nrow=2, rel_heights=c(.8, 1),
-                 label_size=20)
+                  labels=c("E", "F"), ncol=1, rel_heights=c(1,1),
+                  label_size=28)
+p_def <- plot_grid(p_1d, NULL, p_ef,
+                   labels=c("D"), nrow=1, rel_widths=c(1, .05, .95),
+                   label_size=28)
+p_1 <- plot_grid(p_abc, p_def,
+                 labels=NULL, ncol=1, rel_heights=c(1, .9),
+                 label_size=28)
 
 fp <- file.path(OUTPUT_DIR, "fig_1.png")
 png(fp, width=1000, height=1300)
@@ -646,7 +675,7 @@ dev.off()
 ```{r}
 # load the data to make the plots
 # this load the objects: sj_proximity_snps, sj_proximity_indels
-# these objects were created in the script: /home/vbarbo/project_2021/projects/variantCallingFromIsoSeq/scripts_for_all_analyses_in_the_paper/splice_junction_proximity_analysis/splice_junction_proximity.R
+# these objects were created in the script: /home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/2_data_manipulation_and_pre_analysis/splice_junction_proximity_analysis/splice_junction_proximity.R
 load("~/load_later/near_splice_junctions/data_needed_to_make_the_chart.Rdata")
 
 
@@ -836,11 +865,15 @@ p_2b <- p_2b + theme(legend.position="none")
 p_2d <- p_2d + theme(legend.title=element_text(size=16),
                      legend.text=element_text(size=14))
 
-p_ab <- plot_grid(p_2a, p_2b, labels=c("D", "E"), nrow=1, rel_widths=c(1,1),
-                  label_size=20)
-p_cd <- plot_grid(p_2c, p_2d, labels=c("F", "G"), nrow=1, rel_widths=c(1,.3),
-                  label_size=20)
-p_2 <- plot_grid(p_ab, p_cd, nrow=2, rel_widths=c(1,1), rel_heights=c(.8,1))
+### join plots together
+p_ab <- plot_grid(p_2a, NULL, p_2b,
+                  labels=c("A", "", "B"), nrow=1, rel_widths=c(1, .05, 1),
+                  label_size=28)
+p_cd <- plot_grid(p_2c, NULL, p_2d,
+                  labels=c("C", "", "D"), nrow=1, rel_widths=c(1,.05, .35),
+                  label_size=28)
+p_2 <- plot_grid(p_ab, NULL, p_cd,
+                 labels=NULL, ncol=1, rel_heights=c(.8, .05, 1))
 
 fp <- file.path(OUTPUT_DIR, "fig_2.png")
 png(fp, width=1000, height=1000)
