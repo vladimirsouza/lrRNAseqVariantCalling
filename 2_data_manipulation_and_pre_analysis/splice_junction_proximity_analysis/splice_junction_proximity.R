@@ -7,8 +7,8 @@ library(variantCallingFromIsoSeq)
 
 
 ### for snps
-master_table1 <- "~/project_2021/scripts/paper_1/master_tables/jurkat/mt_jurkat_allMethods_filtered_v5.RData"
-master_table2 <- "~/project_2021/scripts/paper_1/master_tables/wtc11/mt_wtc11_allMethods_filtered_v5.RData"
+master_table1 <- "/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/jurkat/mt_jurkat_allMethods_filtered_v6.RData"
+master_table2 <- "/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/wtc11/mt_wtc11_allMethods_filtered_v6.RData"
 min_isoseq_coverage <- 20
 method_names <- c("dv_s_fc", "c3_mix", "gatk_s")
 variant_type <- "snp"
