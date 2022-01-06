@@ -707,15 +707,15 @@ load("~/load_later/near_splice_junctions/data_needed_to_make_the_chart.Rdata")
 sj_proximity_snps <- lapply(sj_proximity_snps, function(x){
   x$Method <- recode(x$Method, "Clair3 mix"="Clair3-mix",
                      "SNCR+FC+DeepVariant"="SNCR+fC+DeepVariant")
-  x <- rename(x, "Precision measures"="Measures")
+  x <- rename(x, "Performance measures"="Measures")
   x
 })
 
 method_cols <- hue_pal()(9)[c(2,5,8)]
 
 p_2a <- ggplot(sj_proximity_snps$acc_sj,
-            aes(x=is_near, y=Score, group=`Precision measures`,
-                colour=`Precision measures`)) +
+            aes(x=is_near, y=Score, group=`Performance measures`,
+                colour=`Performance measures`)) +
   facet_grid(experiment~Method) +
   theme(strip.text = element_text(size = 14)) +
   geom_point(size=4, alpha=.5) +
@@ -744,14 +744,14 @@ dev.off()
 sj_proximity_indels <- lapply(sj_proximity_indels, function(x){
   x$Method <- recode(x$Method, "Clair3 mix"="Clair3-mix",
                      "SNCR+FC+DeepVariant"="SNCR+fC+DeepVariant")
-  x <- rename(x, "Precision measures"="Measures")
+  x <- rename(x, "Performance measures"="Measures")
   x
 })
 
 
 p_2b <- ggplot(sj_proximity_indels$acc_sj,
-            aes(x=is_near, y=Score, group=`Precision measures`,
-                colour=`Precision measures`)) +
+            aes(x=is_near, y=Score, group=`Performance measures`,
+                colour=`Performance measures`)) +
   facet_grid(experiment~Method) +
   theme(strip.text = element_text(size = 14)) +
   geom_point(size=4, alpha=.5) +
@@ -789,7 +789,7 @@ dat_full <- lapply(dat_full, function(x){
                            "insertion"="Insertion")
   x$method <- recode(x$method, "Clair3 mix"="Clair3-mix",
                      "SNCR+FC+DeepVariant"="SNCR+fC+DeepVariant")
-  x <- rename(x, "Precision measures"="Classification")
+  x <- rename(x, "Performance measures"="Classification")
   x
 })
 
@@ -798,7 +798,7 @@ method_cols <- hue_pal()(9)[c(2,5,8)]
 
 p_2c <- ggplot(dat_full$class_counts,
             aes(x=.data$homopolymer_length_intervals, y=.data$percent,
-                group=.data$`Precision measures`, colour=.data$`Precision measures`)) +
+                group=.data$`Performance measures`, colour=.data$`Performance measures`)) +
   facet_grid(variant_type~method) +
   theme(strip.text = element_text(size = 14)) +
   geom_point(size=4, alpha=.5) +
@@ -949,7 +949,7 @@ p_s2 <- ggplot(dat, aes(.data$recall, .data$precision, colour=.data$method)) +
   theme(text = element_text(size = 20)) +
   xlab("Recall") +
   ylab("Precision") +
-  labs(colour="Method", size="Minimum Iso-Seq read coverage") +
+  labs(colour="Pipelines", size="Minimum Iso-Seq read coverage") +
   # scale_x_continuous(breaks=seq(.5, 1, .1), labels=seq(.5, 1, .1)) +
   scale_color_manual(values=method_cols) +
   guides(colour = guide_legend(order=1)) +
@@ -977,8 +977,6 @@ p_s2 <- p_s2 +
 
 
 ### add more f1-score values
-p_s2 <- p_s2_bk
-
 f1 <- seq(.3, .8, by=.1)
 x <- sapply(f1, calc_precision, rec=.78) + .01
 p_s2 <- p_s2 +
@@ -1212,7 +1210,7 @@ p_s4 <- ggplot(dat, aes(.data$recall, .data$precision, colour=.data$method)) +
   theme(text = element_text(size = 20)) +
   xlab("Recall") +
   ylab("Precision") +
-  labs(colour="Method", size="Proportion of N-cigar reads") +
+  labs(colour="Pipelines", size="Proportion of N-cigar reads") +
   # scale_x_continuous(breaks=seq(.5, 1, .1), labels=seq(.5, 1, .1)) +
   scale_color_manual(values=method_cols) +
   guides(colour = guide_legend(order=1)) +
@@ -1296,7 +1294,7 @@ p_s5 <- ggplot(dat, aes(.data$recall, .data$precision, colour=.data$method)) +
   theme(text = element_text(size = 20)) +
   xlab("Recall") +
   ylab("Precision") +
-  labs(colour="Method", size="Minimum Iso-Seq read coverage") +
+  labs(colour="Pipelines", size="Minimum Iso-Seq read coverage") +
   # scale_x_continuous(breaks=seq(.5, 1, .1), labels=seq(.5, 1, .1)) +
   scale_color_manual(values=method_cols) +
   guides(colour = guide_legend(order=1)) +
@@ -1380,7 +1378,7 @@ p_s6 <- ggplot(dat, aes(.data$recall, .data$precision, colour=.data$method)) +
   theme(text = element_text(size = 20)) +
   xlab("Recall") +
   ylab("Precision") +
-  labs(colour="Method", size="Minimum Iso-Seq read coverage") +
+  labs(colour="Pipelines", size="Minimum Iso-Seq read coverage") +
   # scale_x_continuous(breaks=seq(.5, 1, .1), labels=seq(.5, 1, .1)) +
   scale_color_manual(values=method_cols) +
   guides(colour = guide_legend(order=1)) +
