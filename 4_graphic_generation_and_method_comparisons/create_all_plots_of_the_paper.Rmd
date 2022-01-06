@@ -37,12 +37,12 @@ OUTPUT_DIR <- "/home/vbarbo/project_2021/scripts/paper_1/all_figures_2021.12.28"
 # load object mt_jurkat_allMethods_notFiltered
 load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/jurkat/mt_jurkat_allMethods_notFiltered_v6.RData")
 # load object mt_wtc11_allMethods_notFiltered
-load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/wct11/mt_wtc11_allMethods_notFiltered_v6.RData")
+load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/wtc11/mt_wtc11_allMethods_notFiltered_v6.RData")
 
 # load object mt_jurkat_allMethods_filtered
 load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/jurkat/mt_jurkat_allMethods_filtered_v6.RData")
 # load object mt_wtc11_allMethods_filtered
-load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/wct11/mt_wtc11_allMethods_filtered_v6.RData")
+load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/wtc11/mt_wtc11_allMethods_filtered_v6.RData")
 ```
 
 
@@ -157,6 +157,7 @@ dat$filter <- factor(dat$filter,
                      levels=rev(filters_to_apply),
                      ordered=TRUE)
 
+
 ### plot
 p_1b <- ggplot(data=dat, aes(x=filter, fill=Dataset)) + 
   geom_bar(data=subset(dat, Dataset=="Jurkat"), aes(y=..count..*(-1))) + 
@@ -170,10 +171,30 @@ p_1b <- ggplot(data=dat, aes(x=filter, fill=Dataset)) +
   theme(legend.position="bottom") +
   NULL
 
+
+
+### add counts
+num <- table(dat[,-1])
+num <- as.data.frame(num)
+num$x <- num$Freq
+k <- num$Dataset=="Jurkat"
+num$x[k] <- - num$x[k]
+num$text_hjust <- ifelse(k, -0.1, 1.1)
+k1 <- num$filter %in% c("Exonic regions", "High read coverage")
+num$text_hjust[k1] <- ifelse(!k[k1], -0.1, 1.1)
+num$Freq <- format(num$Freq, big.mark=",")
+num$Freq <- gsub(" ", "", num$Freq)
+
+p_1b <- p_1b +
+  geom_text(aes(x=filter, y=x, label=Freq), num, vjust=.5, color="gray40", hjust=num$text_hjust,
+            position = position_dodge(0), size=6)
+
+
 fp <- file.path(OUTPUT_DIR, "pyramid_truth_filter.png")
 png(fp, width=570)
 p_1b
 dev.off()
+
 
 
 # ### using log scale for y axis
