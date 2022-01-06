@@ -35,14 +35,14 @@ library(variantCallingFromIsoSeq)
 OUTPUT_DIR <- "/home/vbarbo/project_2021/scripts/paper_1/all_figures_2021.12.28"
 
 # load object mt_jurkat_allMethods_notFiltered
-load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/jurkat/mt_jurkat_allMethods_notFiltered_v6.RData")
+load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/4_create_master_table/jurkat/mt_jurkat_allMethods_notFiltered_v6.RData")
 # load object mt_wtc11_allMethods_notFiltered
-load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/wtc11/mt_wtc11_allMethods_notFiltered_v6.RData")
+load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/4_create_master_table/wtc11/mt_wtc11_allMethods_notFiltered_v6.RData")
 
 # load object mt_jurkat_allMethods_filtered
-load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/jurkat/mt_jurkat_allMethods_filtered_v6.RData")
+load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/4_create_master_table/jurkat/mt_jurkat_allMethods_filtered_v6.RData")
 # load object mt_wtc11_allMethods_filtered
-load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/wtc11/mt_wtc11_allMethods_filtered_v6.RData")
+load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/4_create_master_table/wtc11/mt_wtc11_allMethods_filtered_v6.RData")
 ```
 
 
@@ -1087,7 +1087,7 @@ dev.off()
 ```
 
 
-### (Fig. S4) compare pipelines that use DeepVariant, per n-cigar read count
+### (Fig. S4) compare pipelines that use DeepVariant, per proportion of n-cigar reads
 
 ```{r}
 cover <- c(10,20)
