@@ -5,15 +5,16 @@
 # iso-seq data
 # read group added
 # duplicates not marked/removed
-# only primary alignments
-# sncr
+# only primary alignments kept
+# using sncr
 # without flagcorrection
 
 
 
-
-REF=/home/vbarbo/project_2021/datasets/reference/GRCh38.p13_genome_only_chrm/GRCh38.p13_all_chr.fasta
-OUTPUT_DIR=/home/vbarbo/project_2021/datasets/wtc11/methods_to_comp/gatk
+### inputs
+REF=/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta
+INPUT_BAM=/home/vbarbo/project_2021/paper_analysis/wtc11/data_manipulation/aln_sncr.bam
+OUTPUT_DIR=/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/gatk
 SAMPLE=isoSeq_wtc11
 THREADS=30
 
@@ -23,16 +24,13 @@ G1000=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/1000G_phase1.sn
 HAPMAP=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/hapmap_3.3.hg38.vcf.gz
 MILLS=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz
 
-# bam genereted by $REPO/wtc11/2_call_variants_from_isoseq/2_using_deepvariant/variantCalling_deepVariant_isoSeq_wtc11.sh
-INPUT_BAM=/home/vbarbo/project_2021/datasets/wtc11/manipulate_data/aln_sncr.bam
 
-# >>>>>>> don't change this >>>>>>>
-# intervals were already created by gatk functions ScatterIntervalsByNs and SplitIntervals for this same reference and when using 30 cores.
+
+### to use 30 cores, intervals for the reference genome were already created in 
+### /home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/1_generate_ground_truth/jurkat/generateGroundTruth_shortReads_gatk_jurkat.sh
 SCATTERED_INTERVAL_LIST=/home/vbarbo/project_2021/datasets/gloria_data/analysis/my_ground_truth_jurkat_wgs_pe_100bp/jurkat100bp_scattered.interval_list
 THREADS=30
 loop_num=`expr $THREADS - 1`
-# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
 
 
 
@@ -59,17 +57,14 @@ mkdir ${OUTPUT_DIR}/base_recalibration_tables
 for i in `seq -f '%04g' 0 $loop_num`
 do
   gatk --java-options "-Xmx4G" BaseRecalibrator \
-    --maximum-cycle-value 100000 \
     -R $REF \
     -I $OUTPUT_DIR/aln_sncr_rg.bam \
     -O ${OUTPUT_DIR}/base_recalibration_tables/${SAMPLE}_recal_data_$i.table \
     -L $SCATTERED_INTERVAL_LIST/$i-scattered.interval_list \
     --known-sites $DBSNP \
     --known-sites $MILLS \
-    --known-sites $G1000 &
-######## <<<<<<-----------==== first, try without `--maximum-cycle-value 100000`
-#    --maximum-cycle-value 100000 \
-#    -L ${OUTPUT_DIR}/${SAMPLE}_scattered.interval_list/$i-scattered.interval_list \
+    --known-sites $G1000 \
+    --maximum-cycle-value 100000 &
 done
 wait
 
@@ -88,7 +83,6 @@ do
   --static-quantized-quals 10 \
   --static-quantized-quals 20 \
   --static-quantized-quals 30 &
-#  -L ${OUTPUT_DIR}/${SAMPLE}_scattered.interval_list/$i-scattered.interval_list \
 done
 wait
 
@@ -105,7 +99,6 @@ do
     -L $SCATTERED_INTERVAL_LIST/$i-scattered.interval_list \
     --native-pair-hmm-threads 1 \
     -ERC GVCF &
-#    -L ${OUTPUT_DIR}/${SAMPLE}_scattered.interval_list/$i-scattered.interval_list \
 #    -pairHMM VSX_LOGLESS_CACHING
 #    -stand-call-conf 10
 done
@@ -123,7 +116,6 @@ do
   -V ${OUTPUT_DIR}/intermediate_gvcfs/${SAMPLE}_recal_$i.g.vcf \
   -L $SCATTERED_INTERVAL_LIST/$i-scattered.interval_list \
   -O ${OUTPUT_DIR}/vcf_parts/${SAMPLE}_variants_$i.vcf &
-#  -L ${OUTPUT_DIR}/${SAMPLE}_scattered.interval_list/$i-scattered.interval_list \
 done
 wait
 
