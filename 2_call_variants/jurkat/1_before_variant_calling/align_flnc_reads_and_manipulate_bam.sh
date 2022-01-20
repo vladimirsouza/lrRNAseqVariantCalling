@@ -3,47 +3,42 @@
 
 
 ### inputs
-FLNC_BAM=/home/vbarbo/project_2021/datasets/gloria_data/jurkat_data/jurkat.flnc.bam
-REF=/home/vbarbo/project_2021/datasets/reference/GRCh38.p13_genome_only_chrm/GRCh38.p13_all_chr.fasta
-OUTPUT_ROOT_DIR=/home/vbarbo/project_2021/datasets/gloria_data/analysis/dv_calls
-OUTPUT_DIR=/home/vbarbo/project_2021/datasets/gloria_data/analysis/dv_calls/noMarkDuplicate
+FLNC_BAM=/home/vbarbo/project_2021/paper_analysis/jurkat/data/rna_iso_seq/jurkat.flnc.bam
+REF=/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta
+OUTPUT_DIR=/home/vbarbo/project_2021/paper_analysis/jurkat/data_manipulation
 THREADS=30
+PATH_TO_FC=/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/flagCorrection.r
 
 
 
 ### convert the unaligned bam file to fastq file
-#flnc_fastq=${FLNC_BAM%bam}fastq
-flnc_fastq=${OUTPUT_ROOT_DIR}/$(basename $FLNC_BAM)
-flnc_fastq=${flnc_fastq%bam}fastq
 bamToFastq \
-  -i $FLNC_BAM \
-  -fq $flnc_fastq
+  -i ${FLNC_BAM} \
+  -fq ${OUTPUT_DIR}/jurkat_flnc.fastq
 
 
 
 ### align reads to the genome of reference
 minimap2 -ax splice \
+  -uf -C5 \
   -t $THREADS \
   --secondary=no \
   $REF \
-  $flnc_fastq \
+  ${OUTPUT_DIR}/jurkat_flnc.fastq \
   | samtools view -bSh -F 2308 - \
-  > $OUTPUT_ROOT_DIR/aln.bam
+  > $OUTPUT_DIR/aln.bam
 
 
 
 ### sort and index
 samtools sort \
   -@ $THREADS \
-  -o $OUTPUT_ROOT_DIR/aln.bam \
-  $OUTPUT_ROOT_DIR/aln.bam
+  -o $OUTPUT_DIR/aln.bam \
+  $OUTPUT_DIR/aln.bam
 
 samtools index \
   -@ $THREADS \
-  $OUTPUT_ROOT_DIR/aln.bam
-
-
-
+  $OUTPUT_DIR/aln.bam
 
 
 
@@ -54,27 +49,23 @@ samtools index \
 ### "Mapping quality (0-255 with 255 for missing)"
 gatk --java-options "-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=$THREADS" SplitNCigarReads \
   -R $REF \
-  -I $OUTPUT_ROOT_DIR/aln.bam \
-  -O $OUTPUT_DIR/aln_split.bam
+  -I $OUTPUT_DIR/aln.bam \
+  -O $OUTPUT_DIR/aln_sncr.bam
 
 
 
 ### flagCorrection
-### in R
-times <- Sys.time()
-library(variantCallingFromIsoSeq)
-flagCorrection(
-  input_bam="/home/vbarbo/project_2021/datasets/gloria_data/analysis/dv_calls/aln.bam",
-  input_sncr_bam="/home/vbarbo/project_2021/datasets/gloria_data/analysis/dv_calls/noMarkDuplicate/aln_split.bam",
-  output_bam="/home/vbarbo/project_2021/datasets/gloria_data/analysis/dv_calls/noMarkDuplicate/aln_split_flagCorrection.bam",
-  threads=30
-)
-(times <- Sys.time() - times)
-#Time difference of ??? mins
-
+Rscript $PATH_TO_FC \
+  $OUTPUT_DIR/aln.bam \
+  $OUTPUT_DIR/aln_sncr.bam \
+  $OUTPUT_DIR \
+  aln_sncr_fc.bam \
+  $THREADS
 
 
 ### index
-samtools index -@ $THREADS $OUTPUT_DIR/aln_split_flagCorrection.bam
+samtools index \
+  -@ $THREADS \
+  $OUTPUT_DIR/aln_sncr_fc.bam
 
 
