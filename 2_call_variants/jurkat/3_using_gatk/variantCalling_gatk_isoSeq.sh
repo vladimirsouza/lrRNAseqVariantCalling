@@ -1,14 +1,20 @@
 #!/bin/bash
 
 
+# wtc-11
+# iso-seq data
+# read group added
+# duplicates not marked/removed
+# only primary alignments kept
+# using sncr
+# without flagcorrection
 
-####### read groups added (needed for gatk)
-####### no duplicates removal
 
 
 ### inputs
-REF=/home/vbarbo/project_2021/datasets/reference/GRCh38.p13_genome_only_chrm/GRCh38.p13_all_chr.fasta
-OUTPUT_DIR=/home/vbarbo/project_2021/datasets/gloria_data/analysis/gatk_calls_isoSeq/noMarkDuplicate
+REF=/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta
+INPUT_BAM=/home/vbarbo/project_2021/paper_analysis/jurkat/data_manipulation/aln_sncr.bam
+OUTPUT_DIR=/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/gatk
 SAMPLE=isoSeq_jurkat
 THREADS=30
 
@@ -18,12 +24,10 @@ G1000=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/1000G_phase1.sn
 HAPMAP=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/hapmap_3.3.hg38.vcf.gz
 MILLS=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz
 
-INPUT_BAM=/home/vbarbo/project_2021/datasets/gloria_data/analysis/dv_calls/aln.bam
 
 
-# use the same intervals already created for this reference and 30 cores
-# this folder was generates by script /home/vbarbo/project_2021/scripts/repository/jurkat/generate_ground_truth/generateGroundTruth_shortReads_gatk_jurkat.sh
-# look for the gatk functions ScatterIntervalsByNs and SplitIntervals
+### to use 30 cores, intervals for the reference genome were already created in 
+### /home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/1_generate_ground_truth/jurkat/generateGroundTruth_shortReads_gatk_jurkat.sh
 SCATTERED_INTERVAL_LIST=/home/vbarbo/project_2021/datasets/gloria_data/analysis/my_ground_truth_jurkat_wgs_pe_100bp/jurkat100bp_scattered.interval_list
 THREADS=30
 loop_num=`expr $THREADS - 1`
@@ -32,27 +36,20 @@ loop_num=`expr $THREADS - 1`
 
 
 ### Add or replace read groups
+# to read about read group: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4243306/
+# topic: Preparing the appropriate read group information
 java -XX:ParallelGCThreads=$THREADS -jar /home/vbarbo/programs/picard/build/libs/picard.jar AddOrReplaceReadGroups \
   -I $INPUT_BAM \
-  -O $OUTPUT_DIR/aln_rg.bam \
+  -O $OUTPUT_DIR/aln_sncr_rg.bam \
   -SO coordinate \
-  -RGID 4 \
-  -RGLB lib1 \
+  -RGID group1 \
+  -RGSM sample1 \
   -RGPL pacbio \
-  -RGPU unit1 \
-  -RGSM sample1
+  -RGLB lib1 \
+  -RGPU unit1
 
+samtools index -@ $THREADS $OUTPUT_DIR/aln_sncr_rg.bam
 
-### Split N
-### there is no need to reassign the mapping quality:
-### (https://lh3.github.io/minimap2/minimap2.html):
-### "Mapping quality (0-255 with 255 for missing)"
-gatk --java-options "-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=$THREADS" SplitNCigarReads \
-  -R $REF \
-  -I $OUTPUT_DIR/aln_rg.bam \
-  -O $OUTPUT_DIR/aln_rg_split.bam
-
-samtools index -@ $THREADS $OUTPUT_DIR/aln_rg_split.bam
 
 
 ### calculate base recalibration
@@ -60,17 +57,14 @@ mkdir ${OUTPUT_DIR}/base_recalibration_tables
 for i in `seq -f '%04g' 0 $loop_num`
 do
   gatk --java-options "-Xmx4G" BaseRecalibrator \
-    --maximum-cycle-value 100000 \
     -R $REF \
-    -I $OUTPUT_DIR/aln_rg_split.bam \
+    -I $OUTPUT_DIR/aln_sncr_rg.bam \
     -O ${OUTPUT_DIR}/base_recalibration_tables/${SAMPLE}_recal_data_$i.table \
     -L $SCATTERED_INTERVAL_LIST/$i-scattered.interval_list \
     --known-sites $DBSNP \
     --known-sites $MILLS \
-    --known-sites $G1000 &
-######## <<<<<<-----------==== first, try without `--maximum-cycle-value 100000`
-#    --maximum-cycle-value 100000 \
-#    -L ${OUTPUT_DIR}/${SAMPLE}_scattered.interval_list/$i-scattered.interval_list \
+    --known-sites $G1000 \
+    --maximum-cycle-value 100000 &
 done
 wait
 
@@ -82,14 +76,13 @@ for i in `seq -f '%04g' 0 $loop_num`
 do
   gatk --java-options "-Xmx4G" ApplyBQSR \
   -R $REF \
-  -I $OUTPUT_DIR/aln_rg_split.bam \
+  -I $OUTPUT_DIR/aln_sncr_rg.bam \
   -bqsr ${OUTPUT_DIR}/base_recalibration_tables/${SAMPLE}_recal_data_$i.table \
   -O ${OUTPUT_DIR}/base_recalibration_bams/${SAMPLE}_recal_$i.bam \
   -L $SCATTERED_INTERVAL_LIST/$i-scattered.interval_list \
   --static-quantized-quals 10 \
   --static-quantized-quals 20 \
   --static-quantized-quals 30 &
-#  -L ${OUTPUT_DIR}/${SAMPLE}_scattered.interval_list/$i-scattered.interval_list \
 done
 wait
 
@@ -106,7 +99,6 @@ do
     -L $SCATTERED_INTERVAL_LIST/$i-scattered.interval_list \
     --native-pair-hmm-threads 1 \
     -ERC GVCF &
-#    -L ${OUTPUT_DIR}/${SAMPLE}_scattered.interval_list/$i-scattered.interval_list \
 #    -pairHMM VSX_LOGLESS_CACHING
 #    -stand-call-conf 10
 done
@@ -124,7 +116,6 @@ do
   -V ${OUTPUT_DIR}/intermediate_gvcfs/${SAMPLE}_recal_$i.g.vcf \
   -L $SCATTERED_INTERVAL_LIST/$i-scattered.interval_list \
   -O ${OUTPUT_DIR}/vcf_parts/${SAMPLE}_variants_$i.vcf &
-#  -L ${OUTPUT_DIR}/${SAMPLE}_scattered.interval_list/$i-scattered.interval_list \
 done
 wait
 
@@ -225,7 +216,5 @@ bcftools sort \
 
 bcftools index ${OUTPUT_DIR}/${SAMPLE}.recal_pass.vcf.gz
 tabix -p vcf ${OUTPUT_DIR}/${SAMPLE}.recal_pass.vcf.gz
-
-
 
 
