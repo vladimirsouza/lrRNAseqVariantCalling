@@ -1,12 +1,12 @@
 #!/bin/bash
 
 
-### this script is to generate our ground-truth vcf file from short-read data.
-### we download the illumina data from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5941560/
+### this script is to generate the ground-truth vcf file (Jurkat dataset) from short-read data.
+### we download illumina data from the paper in https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5941560/
 
 ### in this same paper they also
 ### generate the vcf file, but it's tetraploid. but they provide the code that
-### generates the vcf, so i can get advantage of it to create my own diploid
+### generates the vcf, so we can get advantage of it to create our own diploid
 ### ground-truth vcf file.
 
 ### good documentation in:
@@ -24,33 +24,30 @@
 #################################################################################
 
 
+
 ### downloading the datasets (there are two differente illumina data files for jurkat cells)
-cd /home/vbarbo/project_2021/datasets/gloria_data/dna_short_read_jurkat_downloaded/jurkat_wgs_pe_100bp
+cd /home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_100bp
 wget https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos2/sra-pub-run-7/SRR5349450/SRR5349450.1
 mv SRR5349450.1 jurkat_wgs_pe_100bp
 
-cd /home/vbarbo/project_2021/datasets/gloria_data/dna_short_read_jurkat_downloaded/jurkat_wgs_pe_150bp
+cd /home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_150bp
 wget https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos2/sra-pub-run-7/SRR5349449/SRR5349449.1
 mv SRR5349449.1 jurkat_wgs_pe_150bp
 
 
 
 ### Convert SRA data into fastq format
-cd /home/vbarbo/project_2021/datasets/gloria_data/dna_short_read_jurkat_downloaded/jurkat_wgs_pe_100bp
-fastq-dump -I --split-files jurkat_wgs_pe_100bp
-cd /home/vbarbo/project_2021/datasets/gloria_data/dna_short_read_jurkat_downloaded/jurkat_wgs_pe_150bp
-fastq-dump -I --split-files jurkat_wgs_pe_150bp
+cd /home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_100bp
+fastq-dump --split-files jurkat_wgs_pe_100bp
+cd /home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_150bp
+fastq-dump --split-files jurkat_wgs_pe_150bp
 
+### compress files
+bgzip /home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_100bp/jurkat_wgs_pe_100bp_1.fastq
+bgzip /home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_100bp/jurkat_wgs_pe_100bp_2.fastq
 
-### I shouldn't have used the fastq-dump argument -I. Now I have to remove the last number in fastq sequence name (before first space character)
-cd /home/vbarbo/project_2021/datasets/gloria_data/dna_short_read_jurkat_downloaded/jurkat_wgs_pe_100bp
-sed -i '/^[@+]jurkat_wgs_pe_100bp/ s/\.1 / /' jurkat_wgs_pe_100bp_1.fastq
-sed -i '/^[@+]jurkat_wgs_pe_100bp/ s/\.2 / /' jurkat_wgs_pe_100bp_2.fastq
-cd /home/vbarbo/project_2021/datasets/gloria_data/dna_short_read_jurkat_downloaded/jurkat_wgs_pe_150bp
-sed -i '/^[@+]jurkat_wgs_pe_150bp/ s/\.1 / /' jurkat_wgs_pe_150bp_1.fastq
-sed -i '/^[@+]jurkat_wgs_pe_150bp/ s/\.2 / /' jurkat_wgs_pe_150bp_2.fastq
-
-
+bgzip /home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_150bp/jurkat_wgs_pe_150bp_1.fastq
+bgzip /home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_150bp/jurkat_wgs_pe_150bp_2.fastq
 
 
 
@@ -62,44 +59,37 @@ sed -i '/^[@+]jurkat_wgs_pe_150bp/ s/\.2 / /' jurkat_wgs_pe_150bp_2.fastq
 
 
 ### inputs
-READ1=/home/vbarbo/project_2021/datasets/gloria_data/dna_short_read_jurkat_downloaded/jurkat_wgs_pe_100bp/jurkat_wgs_pe_100bp_1.fastq
-READ2=/home/vbarbo/project_2021/datasets/gloria_data/dna_short_read_jurkat_downloaded/jurkat_wgs_pe_100bp/jurkat_wgs_pe_100bp_2.fastq
-REF=/home/vbarbo/project_2021/datasets/reference/GRCh38.p13_genome_only_chrm/GRCh38.p13_all_chr.fasta
-OUTPUT_DIR=/home/vbarbo/project_2021/datasets/gloria_data/analysis/my_ground_truth_jurkat_wgs_pe_100bp
-SAMPLE=jurkat100bp
+READ1=/home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_100bp/jurkat_wgs_pe_100bp_1.fastq.gz
+READ2=/home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_100bp/jurkat_wgs_pe_100bp_2.fastq.gz
+REF=/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta
+OUTPUT_DIR=/home/vbarbo/project_2021/paper_analysis/jurkat/ground_truth
+SAMPLE1=jurkat100bp
 THREADS=30
 
-#DBSNP=/home/vbarbo/project_2021/datasets/reference/dbSNP_GRCh38/00-common_all.vcf.gz
-#DBSNP=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/Homo_sapiens_assembly38.dbsnp138.vcf.gz
-DBSNP=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/Homo_sapiens_assembly38.known_indels.vcf.gz
-OMNI=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/1000G_omni2.5.hg38.vcf.gz
-G1000=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/1000G_phase1.snps.high_confidence.hg38.vcf.gz
-HAPMAP=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/hapmap_3.3.hg38.vcf.gz
-MILLS=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz
 
 
 
 ### index the ref
 bwa index $REF
 
+samtools faidx $REF
+
+gatk CreateSequenceDictionary -R $REF
+
 
 ### align reads to the reference
-filename=$SAMPLE
 bwa mem -t $THREADS -Ma \
-  -R @RG\\tID:${filename}\\tSM:${filename}\\tPL:ILM\\tLB:${filename} \
+  -R @RG\\tID:${SAMPLE1}\\tSM:${SAMPLE1}\\tPL:ILM\\tLB:${SAMPLE1} \
   $REF \
   $READ1 \
   $READ2 \
-  > ${OUTPUT_DIR}/${SAMPLE}_aln.sam
-#  | samtools sort - -@ $THREADS -n -m 4G -o ${OUTPUT_DIR}/${SAMPLE}_sorted.bam
+  > ${OUTPUT_DIR}/${SAMPLE1}_aln.sam
 
 
 ### create read group
-######### <<<<<<<<<<<<<<<-----------------------------=========== can i use multiple cores here?
-#java -XX:ParallelGCThreads=$THREADS -jar /home/vbarbo/programs/picard/build/libs/picard.jar AddOrReplaceReadGroups \
-java -jar /home/vbarbo/programs/picard/build/libs/picard.jar AddOrReplaceReadGroups \
-  -I ${OUTPUT_DIR}/${SAMPLE}_aln.sam \
-  -O ${OUTPUT_DIR}/${SAMPLE}_sorted.bam \
+java -XX:ParallelGCThreads=$THREADS -jar /home/vbarbo/programs/picard/build/libs/picard.jar AddOrReplaceReadGroups \
+  -I ${OUTPUT_DIR}/${SAMPLE1}_aln.sam \
+  -O ${OUTPUT_DIR}/${SAMPLE1}_sorted.bam \
   -SORT_ORDER queryname \
   -VALIDATION_STRINGENCY LENIENT \
   -MAX_RECORDS_IN_RAM 5000000 \
@@ -108,35 +98,36 @@ java -jar /home/vbarbo/programs/picard/build/libs/picard.jar AddOrReplaceReadGro
   -PL ILLUMINA \
   -PU 1234 \
   -SM jurkat
-#  -SORT_ORDER coordinate
+
+rm ${OUTPUT_DIR}/${SAMPLE1}_aln.sam
 
 
 ### Sequence-marking duplicates
 samtools fixmate -m -@ $THREADS \
-  ${OUTPUT_DIR}/${SAMPLE}_sorted.bam \
-  ${OUTPUT_DIR}/${SAMPLE}_fixmate.bam
+  ${OUTPUT_DIR}/${SAMPLE1}_sorted.bam \
+  ${OUTPUT_DIR}/${SAMPLE1}_fixmate.bam
 samtools sort -@ $THREADS -m 6G \
-  -o ${OUTPUT_DIR}/${SAMPLE}_sorted.bam \
-  ${OUTPUT_DIR}/${SAMPLE}_fixmate.bam
+  -o ${OUTPUT_DIR}/${SAMPLE1}_sorted.bam \
+  ${OUTPUT_DIR}/${SAMPLE1}_fixmate.bam
 samtools markdup -s -@ $THREADS \
-  ${OUTPUT_DIR}/${SAMPLE}_sorted.bam \
-  ${OUTPUT_DIR}/${SAMPLE}_sorted_dedup.bam
+  ${OUTPUT_DIR}/${SAMPLE1}_sorted.bam \
+  ${OUTPUT_DIR}/${SAMPLE1}_sorted_dedup.bam
 samtools index -@ $THREADS \
-  ${OUTPUT_DIR}/${SAMPLE}_sorted_dedup.bam
+  ${OUTPUT_DIR}/${SAMPLE1}_sorted_dedup.bam
 
 
 # ## picard mark duplicates (is this marking all of them with `PG:Z:MarkDuplicates` ?)
 # java -jar /home/vbarbo/programs/picard/build/libs/picard.jar MarkDuplicates \
-#   -I ${OUTPUT_DIR}/${SAMPLE}_sorted.bam \
-#   -O ${OUTPUT_DIR}/${SAMPLE}_dedup.bam \
-#   -M ${OUTPUT_DIR}/${SAMPLE}_metrics.txt \
+#   -I ${OUTPUT_DIR}/${SAMPLE1}_sorted.bam \
+#   -O ${OUTPUT_DIR}/${SAMPLE1}_dedup.bam \
+#   -M ${OUTPUT_DIR}/${SAMPLE1}_metrics.txt \
 #   -ASSUME_SORTED true \
 #   -VALIDATION_STRINGENCY LENIENT
 
 
 # ## index the bam file
 # java -jar /home/vbarbo/programs/picard/build/libs/picard.jar BuildBamIndex \
-#   -I ${OUTPUT_DIR}/${SAMPLE}_dedup.bam
+#   -I ${OUTPUT_DIR}/${SAMPLE1}_dedup.bam
 
 
 
@@ -150,67 +141,48 @@ samtools index -@ $THREADS \
 
 
 ### inputs
-READ1=/home/vbarbo/project_2021/datasets/gloria_data/dna_short_read_jurkat_downloaded/jurkat_wgs_pe_150bp/jurkat_wgs_pe_150bp_1.fastq
-READ2=/home/vbarbo/project_2021/datasets/gloria_data/dna_short_read_jurkat_downloaded/jurkat_wgs_pe_150bp/jurkat_wgs_pe_150bp_2.fastq
-REF=/home/vbarbo/project_2021/datasets/reference/GRCh38.p13_genome_only_chrm/GRCh38.p13_all_chr.fasta
-OUTPUT_DIR=/home/vbarbo/project_2021/datasets/gloria_data/analysis/my_ground_truth_jurkat_wgs_pe_150bp
-SAMPLE=jurkat150bp
-THREADS=30
-
-#DBSNP=/home/vbarbo/project_2021/datasets/reference/dbSNP_GRCh38/00-common_all.vcf.gz
-#DBSNP=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/Homo_sapiens_assembly38.dbsnp138.vcf.gz
-DBSNP=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/Homo_sapiens_assembly38.known_indels.vcf.gz
-OMNI=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/1000G_omni2.5.hg38.vcf.gz
-G1000=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/1000G_phase1.snps.high_confidence.hg38.vcf.gz
-HAPMAP=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/hapmap_3.3.hg38.vcf.gz
-MILLS=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz
-
-
-
-### index the ref
-bwa index $REF
+READ1=/home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_150bp/jurkat_wgs_pe_150bp_1.fastq.gz
+READ2=/home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_150bp/jurkat_wgs_pe_150bp_2.fastq.gz
+SAMPLE2=jurkat150bp
 
 
 ### align reads to the reference
-filename=$SAMPLE
 bwa mem -t $THREADS -Ma \
-  -R @RG\\tID:${filename}\\tSM:${filename}\\tPL:ILM\\tLB:${filename} \
+  -R @RG\\tID:${SAMPLE2}\\tSM:${SAMPLE2}\\tPL:ILM\\tLB:${SAMPLE2} \
   $REF \
   $READ1 \
   $READ2 \
-  > ${OUTPUT_DIR}/${SAMPLE}_aln.sam
-#  | samtools sort - -@ $THREADS -n -m 4G -o ${OUTPUT_DIR}/${SAMPLE}_sorted.bam
+  > ${OUTPUT_DIR}/${SAMPLE2}_aln.sam
 
 
 ### create read group
-######### <<<<<<<<<<<<<<<-----------------------------=========== can i use multiple cores here?
 #java -XX:ParallelGCThreads=$THREADS -jar /home/vbarbo/programs/picard/build/libs/picard.jar AddOrReplaceReadGroups \
 java -jar /home/vbarbo/programs/picard/build/libs/picard.jar AddOrReplaceReadGroups \
-  -I ${OUTPUT_DIR}/${SAMPLE}_aln.sam \
-  -O ${OUTPUT_DIR}/${SAMPLE}_sorted.bam \
+  -I ${OUTPUT_DIR}/${SAMPLE2}_aln.sam \
+  -O ${OUTPUT_DIR}/${SAMPLE2}_sorted.bam \
   -SORT_ORDER queryname \
   -VALIDATION_STRINGENCY LENIENT \
-  -MAX_RECORDS_IN_RAM 5000000 \
   -ID 1 \
   -LB CTTGTA \
   -PL ILLUMINA \
   -PU 1234 \
   -SM jurkat
-#  -SORT_ORDER coordinate
+
+rm ${OUTPUT_DIR}/${SAMPLE2}_aln.sam
 
 
 ### Sequence-marking duplicates
 samtools fixmate -m -@ $THREADS \
-  ${OUTPUT_DIR}/${SAMPLE}_sorted.bam \
-  ${OUTPUT_DIR}/${SAMPLE}_fixmate.bam
+  ${OUTPUT_DIR}/${SAMPLE2}_sorted.bam \
+  ${OUTPUT_DIR}/${SAMPLE2}_fixmate.bam
 samtools sort -@ $THREADS -m 6G \
-  -o ${OUTPUT_DIR}/${SAMPLE}_sorted.bam \
-  ${OUTPUT_DIR}/${SAMPLE}_fixmate.bam
+  -o ${OUTPUT_DIR}/${SAMPLE2}_sorted.bam \
+  ${OUTPUT_DIR}/${SAMPLE2}_fixmate.bam
 samtools markdup -s -@ $THREADS \
-  ${OUTPUT_DIR}/${SAMPLE}_sorted.bam \
-  ${OUTPUT_DIR}/${SAMPLE}_sorted_dedup.bam
+  ${OUTPUT_DIR}/${SAMPLE2}_sorted.bam \
+  ${OUTPUT_DIR}/${SAMPLE2}_sorted_dedup.bam
 samtools index -@ $THREADS \
-  ${OUTPUT_DIR}/${SAMPLE}_sorted_dedup.bam
+  ${OUTPUT_DIR}/${SAMPLE2}_sorted_dedup.bam
 
 
 
@@ -223,14 +195,7 @@ samtools index -@ $THREADS \
 
 
 ### inputs
-BAM1=/home/vbarbo/project_2021/datasets/gloria_data/analysis/my_ground_truth_jurkat_wgs_pe_100bp/jurkat100bp_sorted_dedup.bam
-BAM2=/home/vbarbo/project_2021/datasets/gloria_data/analysis/my_ground_truth_jurkat_wgs_pe_150bp/jurkat150bp_sorted_dedup.bam
-REF=/home/vbarbo/project_2021/datasets/reference/GRCh38.p13_genome_only_chrm/GRCh38.p13_all_chr.fasta
-OUTPUT_DIR=/home/vbarbo/project_2021/datasets/gloria_data/analysis/truth_merged_bams
-SAMPLE=jurkat150bp # i forgot to change the sample name to merged.
-                   # but keep in mind that ~/project_2021/datasets/gloria_data/analysis/truth_merged_bams/primary/jurkat150bp.recal_pass.vcf
-                   # contains not only varaints from jurkat150bp, but also from jurkat100bp
-THREADS=30
+SAMPLE12=jurkat_merged
 
 DBSNP=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/Homo_sapiens_assembly38.known_indels.vcf.gz
 OMNI=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/1000G_omni2.5.hg38.vcf.gz
@@ -244,20 +209,20 @@ MILLS=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/Mills_and_1000G
 ### merge bams
 samtools merge \
   -@ $THREADS \
-  ${OUTPUT_DIR}/${SAMPLE}.bam \
-  $BAM1 \
-  $BAM2
+  ${OUTPUT_DIR}/${SAMPLE12}.bam \
+  ${OUTPUT_DIR}/${SAMPLE1}_sorted_dedup.bam \
+  ${OUTPUT_DIR}/${SAMPLE2}_sorted_dedup.bam
 
 
 ### remove non-primary aligments (i.e., supplementary and secundary)
 samtools view -S -b -F 2308 -@ $THREADS \
-  -o ${OUTPUT_DIR}/primary/${SAMPLE}_primary.bam \
-  ${OUTPUT_DIR}/${SAMPLE}.bam
+  -o ${OUTPUT_DIR}/${SAMPLE12}_primary.bam \
+  ${OUTPUT_DIR}/${SAMPLE12}.bam
 
 
 ### index bam
 samtools index -@ $THREADS \
-  ${OUTPUT_DIR}/primary/${SAMPLE}_primary.bam
+  ${OUTPUT_DIR}/${SAMPLE12}_primary.bam
 
 
 
@@ -268,9 +233,6 @@ samtools index -@ $THREADS \
 ###############################################
 ###### call variants from the merged bam ######
 ###############################################
-
-### more inputs
-OUTPUT_DIR=/home/vbarbo/project_2021/datasets/gloria_data/analysis/truth_merged_bams/primary
 
 
 # https://www.biostars.org/p/363063/
@@ -311,22 +273,21 @@ OUTPUT_DIR=/home/vbarbo/project_2021/datasets/gloria_data/analysis/truth_merged_
 
 
 ### to use multiple cores, create intervals
-interval_root_dir=/home/vbarbo/project_2021/datasets/gloria_data/analysis/my_ground_truth_jurkat_wgs_pe_100bp
+ref_interval_dir=/home/vbarbo/project_2021/paper_analysis/reference/genome/interval_list
 gatk --java-options "-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=$THREADS" ScatterIntervalsByNs \
   -R $REF \
-  -O $interval_root_dir/jurkat100bp.interval_list
+  -O $ref_interval_dir/ref.interval_list
 gatk --java-options "-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=$THREADS" SplitIntervals \
   -R $REF \
-  -L $interval_root_dir/jurkat100bp.interval_list \
+  -L $ref_interval_dir/ref.interval_list \
   --scatter-count $THREADS \
-  -O $interval_root_dir/jurkat100bp_scattered.interval_list
+  -O $ref_interval_dir/ref.scattered.interval_list
 
-SCATTERED_INTERVAL_LIST=/home/vbarbo/project_2021/datasets/gloria_data/analysis/my_ground_truth_jurkat_wgs_pe_100bp/jurkat100bp_scattered.interval_list
-THREADS=30
+# for the next script that also use the same reference genome and the same number o threads, there is no need to create these files again.
+scattered_interval_list=$ref_interval_dir/ref.scattered.interval_list
+
+
 loop_num=`expr $THREADS - 1`
-# as long as we are using the same /home/vbarbo/project_2021/datasets/reference/GRCh38.p13_genome_only_chrm/GRCh38.p13_all_chr.fasta as the reference
-# and 30 cores, it's okay to use this $SCATTERED_INTERVAL_LIST for other analysis
-
 
 
 ### calculate base recalibration
@@ -335,15 +296,13 @@ for i in `seq -f '%04g' 0 $loop_num`
 do
   gatk --java-options "-Xmx4G" BaseRecalibrator \
     -R $REF \
-    -I ${OUTPUT_DIR}/${SAMPLE}.bam \
-    -O ${OUTPUT_DIR}/base_recalibration_tables/${SAMPLE}_recal_data_$i.table \
-    -L $SCATTERED_INTERVAL_LIST/$i-scattered.interval_list \
+    -I ${OUTPUT_DIR}/${SAMPLE12}_primary.bam \
+    -O ${OUTPUT_DIR}/base_recalibration_tables/${SAMPLE12}_recal_data_$i.table \
+    -L $scattered_interval_list/$i-scattered.interval_list \
     --known-sites $DBSNP \
     --known-sites $MILLS \
     --known-sites $G1000 &
-######## <<<<<<-----------==== first, try without `--maximum-cycle-value 100000`
-#    --maximum-cycle-value 100000 \
-#    -L ${OUTPUT_DIR}/${SAMPLE}_scattered.interval_list/$i-scattered.interval_list \
+#    --maximum-cycle-value 100000 \    # first, try without `--maximum-cycle-value 100000`
 done
 wait
 
@@ -354,14 +313,13 @@ for i in `seq -f '%04g' 0 $loop_num`
 do
   gatk --java-options "-Xmx4G" ApplyBQSR \
   -R $REF \
-  -I ${OUTPUT_DIR}/${SAMPLE}.bam \
-  -bqsr ${OUTPUT_DIR}/base_recalibration_tables/${SAMPLE}_recal_data_$i.table \
-  -O ${OUTPUT_DIR}/base_recalibration_bams/${SAMPLE}_recal_$i.bam \
-  -L $SCATTERED_INTERVAL_LIST/$i-scattered.interval_list \
+  -I ${OUTPUT_DIR}/${SAMPLE12}_primary.bam \
+  -bqsr ${OUTPUT_DIR}/base_recalibration_tables/${SAMPLE12}_recal_data_$i.table \
+  -O ${OUTPUT_DIR}/base_recalibration_bams/${SAMPLE12}_recal_$i.bam \
+  -L $scattered_interval_list/$i-scattered.interval_list \
   --static-quantized-quals 10 \
   --static-quantized-quals 20 \
   --static-quantized-quals 30 &
-#  -L ${OUTPUT_DIR}/${SAMPLE}_scattered.interval_list/$i-scattered.interval_list \
 done
 wait
 
@@ -373,12 +331,11 @@ for i in `seq -f '%04g' 0 $loop_num`
 do
   gatk --java-options "-Xmx4G" HaplotypeCaller \
     -R $REF \
-    -I ${OUTPUT_DIR}/base_recalibration_bams/${SAMPLE}_recal_$i.bam \
-    -O ${OUTPUT_DIR}/intermediate_gvcfs/${SAMPLE}_recal_$i.g.vcf \
-    -L $SCATTERED_INTERVAL_LIST/$i-scattered.interval_list \
+    -I ${OUTPUT_DIR}/base_recalibration_bams/${SAMPLE12}_recal_$i.bam \
+    -O ${OUTPUT_DIR}/intermediate_gvcfs/${SAMPLE12}_recal_$i.g.vcf \
+    -L $scattered_interval_list/$i-scattered.interval_list \
     --native-pair-hmm-threads 1 \
     -ERC GVCF &
-#    -L ${OUTPUT_DIR}/${SAMPLE}_scattered.interval_list/$i-scattered.interval_list \
 #    -pairHMM VSX_LOGLESS_CACHING
 #    -stand-call-conf 10
 done
@@ -392,30 +349,29 @@ for i in `seq -f '%04g' 0 $loop_num`
 do
   gatk --java-options "-Xmx4G" GenotypeGVCFs \
   -R $REF \
-  -V ${OUTPUT_DIR}/intermediate_gvcfs/${SAMPLE}_recal_$i.g.vcf \
-  -L $SCATTERED_INTERVAL_LIST/$i-scattered.interval_list \
-  -O ${OUTPUT_DIR}/vcf_parts/${SAMPLE}_variants_$i.vcf &
-#  -L ${OUTPUT_DIR}/${SAMPLE}_scattered.interval_list/$i-scattered.interval_list \
+  -V ${OUTPUT_DIR}/intermediate_gvcfs/${SAMPLE12}_recal_$i.g.vcf \
+  -L $scattered_interval_list/$i-scattered.interval_list \
+  -O ${OUTPUT_DIR}/vcf_parts/${SAMPLE12}_variants_$i.vcf &
 done
 wait
 
 
 # merge scattered phenotype vcf files
-vcfFilesArg=(${OUTPUT_DIR}/vcf_parts/${SAMPLE}_variants_*.vcf)
-vcfFilesArg=${vcfFilesArg[@]/#/-I }
+vcfFilesArg=(${OUTPUT_DIR}/vcf_parts/${SAMPLE12}_variants_*.vcf)
+vcfFilesArg1=${vcfFilesArg[@]/#/-I }
 gatk --java-options "-Xmx4G" GatherVcfs \
   -R $REF \
-  $vcfFilesArg \
-  -O ${OUTPUT_DIR}/${SAMPLE}.vcf
+  $vcfFilesArg1 \
+  -O ${OUTPUT_DIR}/${SAMPLE12}.vcf
 
 
 ### VARIANT QUALITY SCORE RECALIBRATION - SNPs
 mkdir ${OUTPUT_DIR}/variant_recalibration
 gatk --java-options "-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=$THREADS" VariantRecalibrator \
-  -V ${OUTPUT_DIR}/${SAMPLE}.vcf \
-  -O ${OUTPUT_DIR}/variant_recalibration/${SAMPLE}_recalibrate_SNP.recal \
+  -V ${OUTPUT_DIR}/${SAMPLE12}.vcf \
+  -O ${OUTPUT_DIR}/variant_recalibration/${SAMPLE12}_recalibrate_SNP.recal \
   -mode SNP \
-  --tranches-file ${OUTPUT_DIR}/variant_recalibration/${SAMPLE}_recalibrate_SNP.tranches \
+  --tranches-file ${OUTPUT_DIR}/variant_recalibration/${SAMPLE12}_recalibrate_SNP.tranches \
   -tranche 100.0 \
   -tranche 99.9 \
   -tranche 99.0 \
@@ -435,10 +391,10 @@ gatk --java-options "-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=$THREADS" V
 
 ### Apply recalibration to SNPs
 gatk --java-options "-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=$THREADS" ApplyVQSR \
-  -V ${OUTPUT_DIR}/${SAMPLE}.vcf \
-  -O ${OUTPUT_DIR}/variant_recalibration/${SAMPLE}_recalibrated_snps_raw_indels.vcf \
-  --recal-file ${OUTPUT_DIR}/variant_recalibration/${SAMPLE}_recalibrate_SNP.recal \
-  --tranches-file ${OUTPUT_DIR}/variant_recalibration/${SAMPLE}_recalibrate_SNP.tranches \
+  -V ${OUTPUT_DIR}/${SAMPLE12}.vcf \
+  -O ${OUTPUT_DIR}/variant_recalibration/${SAMPLE12}_recalibrated_snps_raw_indels.vcf \
+  --recal-file ${OUTPUT_DIR}/variant_recalibration/${SAMPLE12}_recalibrate_SNP.recal \
+  --tranches-file ${OUTPUT_DIR}/variant_recalibration/${SAMPLE12}_recalibrate_SNP.tranches \
   -truth-sensitivity-filter-level 99.5 \
   --create-output-variant-index true \
   -mode SNP
@@ -446,10 +402,10 @@ gatk --java-options "-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=$THREADS" A
 
 ### Run Variant Recalibrator – Indels
 gatk --java-options "-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=$THREADS" VariantRecalibrator \
-  -V ${OUTPUT_DIR}/variant_recalibration/${SAMPLE}_recalibrated_snps_raw_indels.vcf \
-  -O ${OUTPUT_DIR}/variant_recalibration/${SAMPLE}_recalibrate_INDEL.recal \
+  -V ${OUTPUT_DIR}/variant_recalibration/${SAMPLE12}_recalibrated_snps_raw_indels.vcf \
+  -O ${OUTPUT_DIR}/variant_recalibration/${SAMPLE12}_recalibrate_INDEL.recal \
   -mode INDEL \
-  --tranches-file ${OUTPUT_DIR}/variant_recalibration/${SAMPLE}_recalibrate_INDEL.tranches \
+  --tranches-file ${OUTPUT_DIR}/variant_recalibration/${SAMPLE12}_recalibrate_INDEL.tranches \
   -tranche 100.0 \
   -tranche 99.9 \
   -tranche 99.0 \
@@ -466,11 +422,19 @@ gatk --java-options "-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=$THREADS" V
 
 ### Apply recalibration to Indels
 gatk --java-options "-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=$THREADS" ApplyVQSR \
-  -V ${OUTPUT_DIR}/variant_recalibration/${SAMPLE}_recalibrated_snps_raw_indels.vcf \
-  -O ${OUTPUT_DIR}/${SAMPLE}.recal.vcf \
-  --recal-file ${OUTPUT_DIR}/variant_recalibration/${SAMPLE}_recalibrate_INDEL.recal \
-  --tranches-file ${OUTPUT_DIR}/variant_recalibration/${SAMPLE}_recalibrate_INDEL.tranches \
+  -V ${OUTPUT_DIR}/variant_recalibration/${SAMPLE12}_recalibrated_snps_raw_indels.vcf \
+  -O ${OUTPUT_DIR}/${SAMPLE12}.recal.vcf \
+  --recal-file ${OUTPUT_DIR}/variant_recalibration/${SAMPLE12}_recalibrate_INDEL.recal \
+  --tranches-file ${OUTPUT_DIR}/variant_recalibration/${SAMPLE12}_recalibrate_INDEL.tranches \
   -truth-sensitivity-filter-level 99.0 \
   --create-output-variant-index true \
   -mode INDEL
+
+
+### compress and index the ground-truth VCF
+bgzip -c ${OUTPUT_DIR}/${SAMPLE12}.recal.vcf \
+  > ${OUTPUT_DIR}/${SAMPLE12}.recal.vcf.gz
+bcftools index ${OUTPUT_DIR}/${SAMPLE12}.recal.vcf.gz
+tabix -p vcf ${OUTPUT_DIR}/${SAMPLE12}.recal.vcf.gz
+
 
