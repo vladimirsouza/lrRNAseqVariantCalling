@@ -1,2 +1,2 @@
-# Iso-Seq_variant_calling
+# lrRNAseqVariantCalling
 Codes for the Iso-Seq variant-calling paper
