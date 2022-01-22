@@ -1,54 +1,47 @@
-
-### NanoCaller + SNCR + flagCorrection
-REF=/home/Shared_disaster_recovery/vbarbo/project_2021/datasets/reference/GRCh38.p13_genome_only_chrm/GRCh38.p13_all_chr.fasta
-BAM=/home/Shared_disaster_recovery/vbarbo/project_2021/datasets/gloria_data/analysis/dv_calls/noMarkDuplicate/aln_split_flagCorrection.bam
-OUTPUT_DIR=/home/vbarbo/project_2021/variant_calling_isoseq/jurkat/nanocaller/yes_sncr_yes_fc
-THREADS=10
-
-source activate NanoCaller
-
-python /home/vbarbo/Programs/nanocaller_conda/NanoCaller/scripts/NanoCaller_WGS.py \
-  -bam ${BAM} \
-  -ref ${REF} \
-  -o $OUTPUT_DIR \
-  -cpu $THREADS \
-  -p ccs
+REF=/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta
+INPUT_BAM_DIR=/home/vbarbo/project_2021/paper_analysis/jurkat/data_manipulation
+OUTPUT_DIR=/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/nanocaller
+THREADS=50
 
 
 
+# ### NanoCaller (alone)
+# singularity exec -e --pwd /app \
+#   /home/vbarbo/programs/NanoCaller/nanocaller-1.0.1.simg \
+#   python NanoCaller.py \
+#   -bam $INPUT_BAM_DIR/aln.bam \
+#   -p ccs \
+#   -o $OUTPUT_DIR/nc \
+#   -ref $REF \
+#   -cpu $THREADS
+
+
+conda deactivate
+conda activate NanoCaller
 
 
 ### NanoCaller (alone)
-REF=/home/Shared_disaster_recovery/vbarbo/project_2021/datasets/reference/GRCh38.p13_genome_only_chrm/GRCh38.p13_all_chr.fasta
-BAM=/home/Shared_disaster_recovery/vbarbo/project_2021/datasets/gloria_data/analysis/dv_calls/aln.bam
-OUTPUT_DIR=/home/vbarbo/project_2021/variant_calling_isoseq/jurkat/nanocaller/no_sncr
-THREADS=10
-
-source activate NanoCaller
-
-python /home/vbarbo/Programs/nanocaller_conda/NanoCaller/scripts/NanoCaller_WGS.py \
-  -bam ${BAM} \
-  -ref ${REF} \
-  -o $OUTPUT_DIR \
+python /home/vbarbo/programs/NanoCaller/scripts/NanoCaller_WGS.py \
+  -bam $INPUT_BAM_DIR/aln.bam \
+  -ref $REF \
+  -o $OUTPUT_DIR/nc \
   -cpu $THREADS \
   -p ccs
-
-
-
-
 
 ### NanoCaller + SNCR
-REF=/home/Shared_disaster_recovery/vbarbo/project_2021/datasets/reference/GRCh38.p13_genome_only_chrm/GRCh38.p13_all_chr.fasta
-BAM=/home/Shared_disaster_recovery/vbarbo/project_2021/datasets/gloria_data/analysis/dv_calls/noMarkDuplicate/aln_split.bam
-OUTPUT_DIR=/home/vbarbo/project_2021/variant_calling_isoseq/jurkat/nanocaller/yes_sncr_no_fc
-THREADS=10
-
-source activate NanoCaller
-
-python /home/vbarbo/Programs/nanocaller_conda/NanoCaller/scripts/NanoCaller_WGS.py \
-  -bam ${BAM} \
-  -ref ${REF} \
-  -o $OUTPUT_DIR \
+python /home/vbarbo/programs/NanoCaller/scripts/NanoCaller_WGS.py \
+  -bam $INPUT_BAM_DIR/aln_sncr.bam \
+  -ref $REF \
+  -o $OUTPUT_DIR/nc_sncr \
   -cpu $THREADS \
   -p ccs
+
+### NanoCaller + SNCR + flagCorrection
+python /home/vbarbo/programs/NanoCaller/scripts/NanoCaller_WGS.py \
+  -bam $INPUT_BAM_DIR/aln_sncr_fc.bam \
+  -ref $REF \
+  -o $OUTPUT_DIR/nc_sncr_fc \
+  -cpu $THREADS \
+  -p ccs
+
 
