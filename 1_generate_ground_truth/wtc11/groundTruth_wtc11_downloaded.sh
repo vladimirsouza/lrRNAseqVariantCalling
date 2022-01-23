@@ -10,13 +10,13 @@
 
 
 
+cd /home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth
+
+
 ### download the bam file (it's huge!)
 wget https://allencell.s3.amazonaws.com/aics/wtc11_short_read_genome_sequence/aligned/84773251_trimmed.AH77TTBBXX_DS-229105_GCCAAT.sorted.rg.final.bam
 
-
-
 ### download the ground-truth vcf file
-cd /home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth
 wget https://allencell.s3.amazonaws.com/aics/wtc11_short_read_genome_sequence/variants/3546dc62_AH77TTBBXX_DS-229105_GCCAAT_recalibrated.vcf.gz
 
 ### index
