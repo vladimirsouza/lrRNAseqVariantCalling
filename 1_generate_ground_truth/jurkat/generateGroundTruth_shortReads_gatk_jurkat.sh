@@ -431,10 +431,18 @@ gatk --java-options "-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=$THREADS" A
   -mode INDEL
 
 
+### filter only PASS
+bcftools view -f PASS \
+  ${OUTPUT_DIR}/${SAMPLE12}.recal.vcf \
+  > ${OUTPUT_DIR}/${SAMPLE12}.recal_pass.vcf
+
+
 ### compress and index the ground-truth VCF
-bgzip -c ${OUTPUT_DIR}/${SAMPLE12}.recal.vcf \
-  > ${OUTPUT_DIR}/${SAMPLE12}.recal.vcf.gz
-bcftools index ${OUTPUT_DIR}/${SAMPLE12}.recal.vcf.gz
-tabix -p vcf ${OUTPUT_DIR}/${SAMPLE12}.recal.vcf.gz
+bgzip -c ${OUTPUT_DIR}/${SAMPLE12}.recal_pass.vcf \
+  > ${OUTPUT_DIR}/${SAMPLE12}.recal_pass.vcf.gz
+rm ${OUTPUT_DIR}/${SAMPLE12}.recal_pass.vcf
+bcftools index ${OUTPUT_DIR}/${SAMPLE12}.recal_pass.vcf.gz
+tabix -p vcf ${OUTPUT_DIR}/${SAMPLE12}.recal_pass.vcf.gz
+
 
 
