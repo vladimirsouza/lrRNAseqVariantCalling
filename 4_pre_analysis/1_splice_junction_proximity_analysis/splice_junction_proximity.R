@@ -1,19 +1,19 @@
-# this script is to create and save the data needed to make the figure for the analysis of
-# the effect of splice junction proximity on varaint calling performance
+# this script is to create and save the data needed to make the figures  to analyze the effect of 
+# splice junction proximity on variant calling performance
 
 
 ### load packages
-library(variantCallingFromIsoSeq)
+library(lrRNAseqBenchmark)
 
 
 ### for snps
-master_table1 <- "/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/jurkat/mt_jurkat_allMethods_filtered_v6.RData"
-master_table2 <- "/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/3_creating_master_table/wtc11/mt_wtc11_allMethods_filtered_v6.RData"
+master_table1 <- "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_jurkat_allMethods_filtered_v7.RData"
+master_table2 <- "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_filtered_v7.RData"
 min_isoseq_coverage <- 20
 method_names <- c("dv_s_fc", "c3_mix", "gatk_s")
 variant_type <- "snp"
-output_method_names <- c("SNCR+FC+DeepVariant", "Clair3 mix", "SNCR+GATK")
-truth_names <- c("jurkat_dna_merged", "allen")
+output_method_names <- c("SNCR+FC+DeepVariant", "Clair3-mix", "SNCR+GATK")
+truth_names <- c("merged", "allen")
 experiment_names <- c("Jurkat", "WTC-11")
 
 sj_proximity_snps <- splice_junction_analysis_table(master_table1,
@@ -26,25 +26,18 @@ sj_proximity_snps <- splice_junction_analysis_table(master_table1,
                                                     min_isoseq_coverage=min_isoseq_coverage)
 
 ### for indels
-master_table1 <- "~/project_2021/scripts/paper_1/master_tables/jurkat/mt_jurkat_allMethods_filtered_v5.RData"
-master_table2 <- "~/project_2021/scripts/paper_1/master_tables/wtc11/mt_wtc11_allMethods_filtered_v5.RData"
-min_isoseq_coverage <- 20
-method_names <- c("dv_s_fc", "c3_mix", "gatk_s")
 variant_type <- "indel"
-output_method_names <- c("SNCR+FC+DeepVariant", "Clair3 mix", "SNCR+GATK")
-truth_names <- c("jurkat_dna_merged", "allen")
-experiment_names <- c("Jurkat", "WTC-11")
 
 sj_proximity_indels <- splice_junction_analysis_table(master_table1,
-                                                     master_table2,
-                                                     experiment_names=experiment_names,
-                                                     truth_names=truth_names,
-                                                     method_names=method_names,
-                                                     output_method_names=output_method_names,
-                                                     variant_type=variant_type,
-                                                     min_isoseq_coverage=min_isoseq_coverage)
+                                                      master_table2,
+                                                      experiment_names=experiment_names,
+                                                      truth_names=truth_names,
+                                                      method_names=method_names,
+                                                      output_method_names=output_method_names,
+                                                      variant_type=variant_type,
+                                                      min_isoseq_coverage=min_isoseq_coverage)
 
 ### save the objects to a file
 save(sj_proximity_snps, sj_proximity_indels,
-     file="~/load_later/near_splice_junctions/data_needed_to_make_the_chart.Rdata")
+     file="/home/vbarbo/project_2021/paper_analysis/extra_files/splice_junction_proximity_analysis.Rdata")
 
