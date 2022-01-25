@@ -17,8 +17,8 @@
 
 
 ### inputs
-CCS_BAM=/home/vbarbo/project_2021/paper_analysis/wtc11/data/XGSUV_20200804_S64049_PL100158447-1_A01.ccs.bam
-PRIMERS_FASTA=/home/vbarbo/project_2021/paper_analysis/wtc11/data/NEB_primers.fasta
+CCS_BAM=/home/vbarbo/project_2021/paper_analysis/wtc11/data/rna_iso_seq/XGSUV_20200804_S64049_PL100158447-1_A01.ccs.bam
+PRIMERS_FASTA=/home/vbarbo/project_2021/paper_analysis/wtc11/data/rna_iso_seq/NEB_primers.fasta
 SAMPLE_NAME=XGSUV_20200804_S64049_PL100158447-1_A01
 REF=/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta
 OUTPUT_DIR=/home/vbarbo/project_2021/paper_analysis/wtc11/data_manipulation
