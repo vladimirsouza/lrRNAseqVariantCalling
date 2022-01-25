@@ -488,10 +488,11 @@ save(mt_wtc11_allMethods_notFiltered,
 
 # Filtering master table
 
-* short-read variant density: x <= 3                          (ignore positions)
-* ignore intronic regions (isoSeq_coverage > 0)               (ignore positions)
-* DeepVariant QUAL: x >= 15                                   (remove method calling)
-* short-read coverare : quantil 5% <= x <= 95%                (ignore positions)
+Sites to keep:  
+* short-read variant density: x <= 3                          (ignore positions)  
+* ignore intronic regions (isoSeq_coverage > 0)               (ignore positions)  
+* DeepVariant QUAL: x >= 15                                   (remove method calling)  
+* short-read coverare : quantil 5% <= x <= 95%                (ignore positions)  
 
 ```{r}
 # no filtering

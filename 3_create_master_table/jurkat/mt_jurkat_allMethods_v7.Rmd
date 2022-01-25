@@ -412,6 +412,7 @@ save(mt_jurkat_allMethods_notFiltered,
 
 # Filtering master table
 
+Sites to keep:  
 * short-read variant density: x <= 3                          (ignore positions)  
 * ignore intronic regions (isoSeq_coverage > 0)               (ignore positions)  
 * DeepVariant QUAL: x >= 15                                   (remove method calling)  
