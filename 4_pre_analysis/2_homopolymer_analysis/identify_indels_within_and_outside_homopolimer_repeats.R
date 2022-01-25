@@ -1,15 +1,20 @@
-# this script is to create the table that stores the data needed to draw plots for the homopolymer analysis
+# this script is to create the table that stores the data needed to draw  the plot for the homopolymer analysis
 
-# besides the comomn filters, i filterd out variants that:
-#   * iso-seq coverage is lower than 20 reads;
-#   * are in regions (201 bp window) that the variant density, from iso-seq data, is >3 (consider calls from all methods/pipelines);
-#   * are near to splice junction (not further than 20 bp);
+# we kept only sites that:
+#   * short-read variant density: x <= 3                          (ignore positions)
+#   * ignore intronic regions (isoSeq_coverage > 0)               (ignore positions)
+#   * DeepVariant QUAL: x >= 15                                   (remove method calling)
+#   * short-read coverare : quantil 5% <= x <= 95%                (ignore positions)
+
+#   * iso-seq coverage is higher than 20 reads;
+#   * iso-seq variant density: x <= 3 (consider calls from all methods/pipelines);
+#   * are far from splice junction (further than 20 bp);
 #   * are classified as heterozygous alternative
-
+#   * indels
 
 
 ### load packages
-library(variantCallingFromIsoSeq)
+library(lrRNAseqBenchmark)
 library(dplyr)
 library(Biostrings)
 library(tibble)
@@ -18,95 +23,58 @@ library(ggplot2)
 
 
 ### filter master table
-METHOD_NAMES <- c("dv", "dv_s", "dv_s_fc",
-                  "c3", "c3_s", "c3_s_fc", "c3_mix",
-                  "gatk_s")
+# METHOD_NAMES <- c("dv_s_fc", "c3_mix", "gatk_s")
 TRUTH_NAME <- "allen"
-load("~/project_2021/scripts/paper_1/master_tables/wtc11/mt_wtc11_allMethods_notFiltered_v5.RData")
-dat1 <- mt_wtc11_allMethods_notFiltered
-
-shortread_cover_quantiles <- quantile(dat1$shortRead_coverage, probs=c(.05, .95))
-
-k <- !( dat1$variantDensity_allen > 3 )
-k1 <- !( dat1$variantDensity_dv_dvS_dvSFc_c3_c3S_c3SFc_c3Mix_gatkS > 3 )
-k <- k & k1
-dat1 <- dat1[k,]
-
-dat1 <- filter(dat1, isoSeq_coverage>0)
-dim(dat1)
-
-dat1 <- filter(dat1, shortRead_coverage >= shortread_cover_quantiles[1] &
-                 shortRead_coverage <= shortread_cover_quantiles[2])
-
-k <- which( dat1$qual_dv < 15 )
-dat1$in_dv[k] <- 0
-dat1 <- add_method_vs_truth_comparison_to_master_table(
-  dat1,
-  METHOD_NAMES[1],
-  TRUTH_NAME,
-  replace_column=TRUE
+WTC11_MASTER_TABLE <- "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_filtered_v7_filterVariantDensityIsoSeqAllMethods.RData"
+HOMOPOLYMERS_IN_REF <- "/home/vbarbo/project_2021/paper_analysis/extra_files/homopolymers_GRCh38.p13_all_chr.RData"
+REF_FASTA <- "/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta"
+TRUTH_VCF_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth/3546dc62_AH77TTBBXX_DS-229105_GCCAAT_recalibrated_subsetChromosomes_pass.vcf.gz"
+METHOD_VCF_FILES <- c(
+  "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/deepvariant/dv_sncr_fc/deepvariant_calls_pass.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/clair3/mix/pileup_pass_mix_nodup.recode.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/gatk/isoSeq_wtc11.recal_pass.vcf.gz"
 )
 
-k <- which( dat1$qual_dvS < 15 )
-dat1$in_dv_s[k] <- 0
-dat1 <- add_method_vs_truth_comparison_to_master_table(
-  dat1,
-  METHOD_NAMES[2],
-  TRUTH_NAME,
-  replace_column=TRUE
-)
 
-k <- which( dat1$qual_dvSFc < 15 )
-dat1$in_dv_s_fc[k] <- 0
-dat1 <- add_method_vs_truth_comparison_to_master_table(
-  dat1,
-  METHOD_NAMES[3],
-  TRUTH_NAME,
-  replace_column=TRUE
-)
+### get master table and filter it
+k <- load(WTC11_MASTER_TABLE)
+dat1 <- get(k)
 
 dat1 <- filter(dat1, is_near_ss==0)
 
 
-
-
 ### get indels in homopolymers (homopolymer length equal to 1 means non homopolymer)
 ### also, filter sites by minimum iso-seq read coverage
-load("~/load_later/homopolymers_GRCh38.p13.RData")
-ref_fasta_seqs <- readDNAStringSet("/home/vbarbo/project_2021/datasets/reference/GRCh38.p13_genome_only_chrm/GRCh38.p13_all_chr.fasta")
+load(HOMOPOLYMERS_IN_REF)
+ref_fasta_seqs <- readDNAStringSet(REF_FASTA)
 names(ref_fasta_seqs) <- sub(" .+", "", names(ref_fasta_seqs))
-TRUTH_VCF_FILE <- "/home/vbarbo/project_2021/datasets/wtc11/truth/allen_institute_wtc11_shortreads_wgs/3546dc62_AH77TTBBXX_DS-229105_GCCAAT_recalibrated_subsetChromosomes_pass.vcf.gz"
-METHOD_VCF_FILES <- c(
-  "~/project_2021/datasets/wtc11/methods_to_comp/deepvariant/deepvariant_calls_pass.vcf.gz",
-  "~/project_2021/datasets/wtc11/methods_to_comp/clair3/mix/pileup_pass_mix_nodup.recode.vcf.gz",
-  "~/project_2021/datasets/wtc11/methods_to_comp/gatk/isoSeq_wtc11.recal_pass.vcf.gz"
-)
+
 # dv_s_fc
 dat_hom_dvSFc <- method_homopolymer_indels(input_table=dat1,
-                                           first_method_name="allen",
+                                           first_method_name=TRUTH_NAME,
                                            second_method_name="dv_s_fc",
                                            vcf_first=TRUTH_VCF_FILE,
-                                           vcf_second=METHOD_VCF_FILES[[1]],
+                                           vcf_second=METHOD_VCF_FILES[1],
                                            homopolymers=homopolymers,
                                            ref_fasta_seqs=ref_fasta_seqs,
                                            min_isoseq_coverage=20,
                                            genotyped_alt="find")
 # c3_mix
 dat_hom_c3Mix <- method_homopolymer_indels(input_table=dat1,
-                                           first_method_name="allen",
+                                           first_method_name=TRUTH_NAME,
                                            second_method_name="c3_mix",
                                            vcf_first=TRUTH_VCF_FILE,
-                                           vcf_second=METHOD_VCF_FILES[[2]],
+                                           vcf_second=METHOD_VCF_FILES[2],
                                            homopolymers=homopolymers,
                                            ref_fasta_seqs=ref_fasta_seqs,
                                            min_isoseq_coverage=20,
                                            genotyped_alt="find")
 # gatk_s
 dat_hom_gatkS <- method_homopolymer_indels(input_table=dat1,
-                                           first_method_name="allen",
+                                           first_method_name=TRUTH_NAME,
                                            second_method_name="gatk_s",
                                            vcf_first=TRUTH_VCF_FILE,
-                                           vcf_second=METHOD_VCF_FILES[[3]],
+                                           vcf_second=METHOD_VCF_FILES[3],
                                            homopolymers=homopolymers,
                                            ref_fasta_seqs=ref_fasta_seqs,
                                            min_isoseq_coverage=20,
@@ -220,9 +188,10 @@ dat_full$dat_text$method <- factor(dat_full$dat_text$method,
                                    levels=k, ordered=TRUE)
 
 
-### save object `dat_full` to a file.
+dat_homopolymer <- dat_full
+
+### save object `dat_homopolymer` to a file.
 ### this is the data used to draw the chart for the homopolymer analysis
-save(dat_full, file="~/load_later/homopolymer_analysis/all_methods_info_mtFilteredV5_filterVariantDensityIsoSeq_noNearSJ.RData")
-# save(dat_full, file="~/load_later/homopolymer_analysis/all_methods_info_mtFilteredV5_filterVariantDensityIsoSeq_noNearSJ_isoSeqCover20.RData")
+save(dat_homopolymer, file="/home/vbarbo/project_2021/paper_analysis/extra_files/dat_homopolymer_analysis.RData")
 
 
