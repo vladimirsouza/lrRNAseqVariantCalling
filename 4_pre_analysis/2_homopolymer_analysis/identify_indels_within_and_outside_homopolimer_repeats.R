@@ -1,46 +1,97 @@
 # this script is to create the table that stores the data needed to draw  the plot for the homopolymer analysis
 
 # we kept only sites that:
-#   * short-read variant density: x <= 3                          (ignore positions)
-#   * ignore intronic regions (isoSeq_coverage > 0)               (ignore positions)
-#   * DeepVariant QUAL: x >= 15                                   (remove method calling)
-#   * short-read coverare : quantil 5% <= x <= 95%                (ignore positions)
-
-#   * iso-seq coverage is higher than 20 reads;
-#   * iso-seq variant density: x <= 3 (consider calls from all methods/pipelines);
-#   * are far from splice junction (further than 20 bp);
-#   * are classified as heterozygous alternative
-#   * indels
+#   * commun filter:
+#     * short-read variant density: x <= 3                          (ignore positions)
+#     * ignore intronic regions (isoSeq_coverage > 0)               (ignore positions)
+#     * DeepVariant QUAL: x >= 15                                   (remove method calling)
+#     * short-read coverare : quantil 5% <= x <= 95%                (ignore positions)
+#   * extra filtering:
+#     * iso-seq variant density: x <= 3
+#     * are far from splice junction, i.e. further than 20 bp;
+#     * iso-seq coverage is higher than 20 reads (by function `method_homopolymer_indels`);
+#     * are classified as heterozygous alternative (by function `method_homopolymer_indels`);
+#     * indels (by function `method_homopolymer_indels`);
 
 
 ### load packages
 library(lrRNAseqBenchmark)
 library(dplyr)
 library(Biostrings)
-library(tibble)
-library(tidyr)
-library(ggplot2)
+library(snakecase)
+# library(tibble)
+# library(tidyr)
+# library(ggplot2)
 
 
-### filter master table
+### IMPORTANT: there are other variables defined through the script
 # METHOD_NAMES <- c("dv_s_fc", "c3_mix", "gatk_s")
-TRUTH_NAME <- "allen"
-WTC11_MASTER_TABLE <- "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_filtered_v7_filterVariantDensityIsoSeqAllMethods.RData"
-HOMOPOLYMERS_IN_REF <- "/home/vbarbo/project_2021/paper_analysis/extra_files/homopolymers_GRCh38.p13_all_chr.RData"
-REF_FASTA <- "/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta"
-TRUTH_VCF_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth/3546dc62_AH77TTBBXX_DS-229105_GCCAAT_recalibrated_subsetChromosomes_pass.vcf.gz"
 METHOD_VCF_FILES <- c(
   "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/deepvariant/dv_sncr_fc/deepvariant_calls_pass.vcf.gz",
   "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/clair3/mix/pileup_pass_mix_nodup.recode.vcf.gz",
   "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/gatk/isoSeq_wtc11.recal_pass.vcf.gz"
 )
+TRUTH_NAME <- "allen"
+TRUTH_VCF_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth/3546dc62_AH77TTBBXX_DS-229105_GCCAAT_recalibrated_subsetChromosomes_pass.vcf.gz"
+MASTER_TABLE <- "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_notFiltered_v7.RData"
+REF_FASTA <- "/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta"
+HOMOPOLYMERS_IN_REF <- "/home/vbarbo/project_2021/paper_analysis/extra_files/homopolymers_GRCh38.p13_all_chr.RData"
 
 
 ### get master table and filter it
-k <- load(WTC11_MASTER_TABLE)
+k <- load("/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_notFiltered_v7.RData")
 dat1 <- get(k)
+dim(dat1)
 
+shortread_cover_quantiles <- quantile(dat1$shortRead_coverage, probs=c(.05, .95))
+
+# >>> variant/sequence_error density -- filter using the ground truth and iso-seq (all methods)
+k <- paste0("variantDensity_", TRUTH_NAME)
+k <- !( dat1[,k] > 3 )
+k1 <- "variantDensity_dv_dvS_dvSFc_c3_c3S_c3SFc_c3Mix_gatkS_ncS"
+k1 <- !( dat1[,k1] > 3 )
+k <- k | k1
+dat1 <- dat1[k,]
+dim(dat1)
+# <<<
+
+dat1 <- filter(dat1, isoSeq_coverage>0)
+dim(dat1)
+
+dat1 <- filter(dat1, shortRead_coverage >= shortread_cover_quantiles[1] &
+                 shortRead_coverage <= shortread_cover_quantiles[2])
+dim(dat1)
+
+k <- which( dat1$qual_dv < 15 )
+dat1$in_dv[k] <- 0
+dat1 <- add_method_vs_truth_comparison_to_master_table(
+  dat1,
+  "dv",
+  TRUTH_NAME,
+  replace_column=TRUE
+)
+k <- which( dat1$qual_dvS < 15 )
+dat1$in_dv_s[k] <- 0
+dat1 <- add_method_vs_truth_comparison_to_master_table(
+  dat1,
+  "dv_s",
+  TRUTH_NAME,
+  replace_column=TRUE
+)
+k <- which( dat1$qual_dvSFc < 15 )
+dat1$in_dv_s_fc[k] <- 0
+dat1 <- add_method_vs_truth_comparison_to_master_table(
+  dat1,
+  "dv_s_fc",
+  TRUTH_NAME,
+  replace_column=TRUE
+)
+
+# >>> keep only sites far from splice junction
 dat1 <- filter(dat1, is_near_ss==0)
+dim(dat1)
+# <<<
+
 
 
 ### get indels in homopolymers (homopolymer length equal to 1 means non homopolymer)
