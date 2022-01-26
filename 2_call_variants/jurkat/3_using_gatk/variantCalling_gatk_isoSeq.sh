@@ -26,12 +26,12 @@ MILLS=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/Mills_and_1000G
 
 
 
+
 ### to use 30 cores, intervals for the reference genome were already created in 
-### /home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/1_generate_ground_truth/jurkat/generateGroundTruth_shortReads_gatk_jurkat.sh
-SCATTERED_INTERVAL_LIST=/home/vbarbo/project_2021/datasets/gloria_data/analysis/my_ground_truth_jurkat_wgs_pe_100bp/jurkat100bp_scattered.interval_list
+### /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/1_generate_ground_truth/jurkat/generateGroundTruth_shortReads_gatk_jurkat.sh
+SCATTERED_INTERVAL_LIST=/home/vbarbo/project_2021/paper_analysis/reference/genome/interval_list/ref.scattered.interval_list
 THREADS=30
 loop_num=`expr $THREADS - 1`
-
 
 
 
