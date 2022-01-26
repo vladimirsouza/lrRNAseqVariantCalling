@@ -2,11 +2,8 @@
 
 
 
+# this script generates all different BAM files (using or not SNCR/flagCorrection) to call variants from Iso-Seq data (WTC-11 dataset).
 
-######################## <<<<<<<<<-----------------=======
-# use wtc-11 Iso-Seq data, gloria's data. downloaded from:
-# https://sheynkman-lab-lifebit.s3.eu-west-1.amazonaws.com/Sample-Data/WTC11/XGSUV_20200804_S64049_PL100158447-1_A01.ccs.fastq.gz
-# the data are ccs in fastq format.
 
 
 # wtc-11
