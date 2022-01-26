@@ -82,9 +82,7 @@ THREADS <- 30
 library(lrRNAseqBenchmark)
 library(GenomicAlignments)
 library(dplyr)
-library(Biostrings)
 library(sarlacc)
-library(snakecase)
 ```
 
 
@@ -426,10 +424,7 @@ dat <- is_indel_method(dat, TRUTH_NAME, "nc_s")
 ### TRUTH_NAME
 dat <- add_variant_density_of_a_method(dat, 201, TRUTH_NAME)
 
-### the best METHOD_NAMES
-dat <- add_variant_density_of_a_method(dat, 201, METHOD_NAMES[c(3,7,8)])
-
-### METHOD_NAMES
+### all methods
 dat <- add_variant_density_of_a_method(dat, 201, METHOD_NAMES)
 ```
 
