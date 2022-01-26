@@ -126,5 +126,5 @@ datf$method <- factor(datf$method, levels=k, ordered=TRUE)
 
 dat_ase <- datf
 
-save(datf, file="/home/vbarbo/project_2021/paper_analysis/extra_files/dat_ase_analysis.RData")
+save(dat_ase, file="/home/vbarbo/project_2021/paper_analysis/extra_files/dat_ase_analysis.RData")
 
