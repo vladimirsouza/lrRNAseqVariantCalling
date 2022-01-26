@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # intro
 
-all pictures of the paper
+Make all figures of the paper
 
 
 
@@ -29,20 +29,26 @@ library(ComplexUpset)
 library(cowplot)
 library(lemon)
 # library(rlang)
-library(variantCallingFromIsoSeq)
+library(lrRNAseqBenchmark)
+library(snakecase)
+library(MASS)
+library(viridis)
 
 
-OUTPUT_DIR <- "/home/vbarbo/project_2021/scripts/paper_1/all_figures_2021.12.28"
+TRUTH_NAME_JURKAT <- "merged"
+TRUTH_NAME_WTC11 <- "allen"
+OUTPUT_DIR <- "/home/vbarbo/project_2021/paper_analysis/figures_and_results"
+EXTERNAL_FIGS <- "/home/vbarbo/project_2021/paper_analysis/figures_and_results/external_figures"
 
 # load object mt_jurkat_allMethods_notFiltered
-load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/4_create_master_table/jurkat/mt_jurkat_allMethods_notFiltered_v6.RData")
+load("/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_jurkat_allMethods_notFiltered_v7.RData")
 # load object mt_wtc11_allMethods_notFiltered
-load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/4_create_master_table/wtc11/mt_wtc11_allMethods_notFiltered_v6.RData")
+load("/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_notFiltered_v7.RData")
 
 # load object mt_jurkat_allMethods_filtered
-load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/4_create_master_table/jurkat/mt_jurkat_allMethods_filtered_v6.RData")
+load("/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_jurkat_allMethods_filtered_v7.RData")
 # load object mt_wtc11_allMethods_filtered
-load("/home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/4_create_master_table/wtc11/mt_wtc11_allMethods_filtered_v6.RData")
+load("/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_filtered_v7.RData")
 ```
 
 
@@ -65,13 +71,15 @@ filters_to_apply <- c(
 
 
 ### initiate table of varaint counts (all variants)
+in_jurkat_truth <- paste0("in_", TRUTH_NAME_JURKAT)
 dat <- dat_jurkat %>% 
   { paste(.[,1], .[,2], sep="-") } %>% 
-  .[dat_jurkat$in_jurkat_dna_merged==1] %>% 
+  .[dat_jurkat[,in_jurkat_truth]==1] %>% 
   data.frame(pos=., Dataset="Jurkat")
+in_wtc11_truth <- paste0("in_", TRUTH_NAME_WTC11)
 dat <- dat_wtc11 %>% 
   { paste(.[,1], .[,2], sep="-") } %>% 
-  .[dat_wtc11$in_allen==1] %>% 
+  .[dat_wtc11[,in_wtc11_truth]==1] %>% 
   data.frame(pos=., Dataset="WTC-11") %>% 
   rbind(dat, .) %>% 
   cbind(filter=filters_to_apply[1])
@@ -83,21 +91,23 @@ shortread_cover_quantiles_wtc11 <- quantile(dat_wtc11$shortRead_coverage, probs=
 
 ### filter by variant density
 # jurkat
-k <- !( dat_jurkat$variantDensity_jurkatDnaMerged > 3 )
+variantDensity_jurkat_truth <- paste0( "variantDensity_", to_lower_camel_case(TRUTH_NAME_JURKAT) )
+k <- !( dat_jurkat[,variantDensity_jurkat_truth] > 3 )
 dat_jurkat <- dat_jurkat[k,]
 dim(dat_jurkat)
 # wtc11
-k <- !( dat_wtc11$variantDensity_allen > 3 )
+variantDensity_wtc11_truth <- paste0( "variantDensity_", to_lower_camel_case(TRUTH_NAME_WTC11) )
+k <- !( dat_wtc11[,variantDensity_wtc11_truth] > 3 )
 dat_wtc11 <- dat_wtc11[k,]
 dim(dat_wtc11)
 
 dat1 <- dat_jurkat %>% 
   { paste(.[,1], .[,2], sep="-") } %>% 
-  .[dat_jurkat$in_jurkat_dna_merged==1] %>% 
+  .[dat_jurkat[,in_jurkat_truth]==1] %>% 
   data.frame(pos=., Dataset="Jurkat")
 dat1 <- dat_wtc11 %>% 
   { paste(.[,1], .[,2], sep="-") } %>% 
-  .[dat_wtc11$in_allen==1] %>% 
+  .[dat_wtc11[,in_wtc11_truth]==1] %>% 
   data.frame(pos=., Dataset="WTC-11") %>% 
   rbind(dat1, .) %>% 
   cbind(filter=filters_to_apply[2])
@@ -115,11 +125,11 @@ dim(dat_wtc11)
 
 dat1 <- dat_jurkat %>% 
   { paste(.[,1], .[,2], sep="-") } %>% 
-  .[dat_jurkat$in_jurkat_dna_merged==1] %>% 
+  .[dat_jurkat[,in_jurkat_truth]==1] %>% 
   data.frame(pos=., Dataset="Jurkat")
 dat1 <- dat_wtc11 %>% 
   { paste(.[,1], .[,2], sep="-") } %>% 
-  .[dat_wtc11$in_allen==1] %>% 
+  .[dat_wtc11[,in_wtc11_truth]==1] %>% 
   data.frame(pos=., Dataset="WTC-11") %>% 
   rbind(dat1, .) %>% 
   cbind(filter=filters_to_apply[3])
@@ -140,11 +150,11 @@ dim(dat_wtc11)
 
 dat1 <- dat_jurkat %>% 
   { paste(.[,1], .[,2], sep="-") } %>% 
-  .[dat_jurkat$in_jurkat_dna_merged==1] %>% 
+  .[dat_jurkat[,in_jurkat_truth]==1] %>% 
   data.frame(pos=., Dataset="Jurkat")
 dat1 <- dat_wtc11 %>% 
   { paste(.[,1], .[,2], sep="-") } %>% 
-  .[dat_wtc11$in_allen==1] %>% 
+  .[dat_wtc11[,in_wtc11_truth]==1] %>% 
   data.frame(pos=., Dataset="WTC-11") %>% 
   rbind(dat1, .) %>% 
   cbind(filter=filters_to_apply[4])
@@ -246,7 +256,7 @@ dat <- calculate_precision_recall_for_multi_master_tables(
   method_names = c("dv_s_fc", "c3_mix", "gatk_s"),
   output_method_names = output_method_names,
   data_names = "isoSeq",
-  truth_names = c("jurkat_dna_merged", "allen"),
+  truth_names = c(TRUTH_NAME_JURKAT, TRUTH_NAME_WTC11),
   coverage_thresholds = c(3, 15, 40, 100),
   what = "snps_indels"
 )
@@ -335,7 +345,7 @@ dat1 <- filter(dat_jurkat, isoSeq_coverage >= 30)
 dim(dat1)
 
 ### filter out variant that are not in the ground truth and not called by any method
-k <- select(dat1, in_dv_s_fc, in_c3_mix, in_gatk_s, in_jurkat_dna_merged) %>% 
+k <- select(dat1, in_dv_s_fc, in_c3_mix, in_gatk_s, all_of(in_jurkat_truth)) %>% 
   apply(1, function(x) all(x==0))
 dat1 <- dat1[!k,]
 dim(dat1)
@@ -348,16 +358,18 @@ dat1[,k] <- lapply(dat1[,k], function(x){
 })
 
 ### decide the type of the variants
-vartype_tbl <- select(dat1, variantType_jurkat_dna_merged, variantType_dv_s_fc,
+variantType_jurkat_truth <- paste0("variantType_", TRUTH_NAME_JURKAT)
+vartype_tbl <- select(dat1, variantType_dv_s_fc,
                       variantType_c3_mix, variantType_gatk_s,
-                      variantType_jurkat_dna_merged)
+                      all_of(variantType_jurkat_truth))
 
 # first criterion: definition by the ground truth
 # second criterion: it the ground truth doens't know the variant type, consider what
 # the methods say.
-truth_is_na <- vartype_tbl$variantType_jurkat_dna_merged == "NA"
+truth_is_na <- vartype_tbl[,variantType_jurkat_truth] == "NA"
 varTypeLevels <- c("deletion", "hetAlt", "homRef", "insertion", "NA", "snp")
-typeCounts <- subset(vartype_tbl, select=-variantType_jurkat_dna_merged) %>% 
+k <- names(vartype_tbl) != variantType_jurkat_truth
+typeCounts <- vartype_tbl[,k] %>% 
   apply(1, function(x){
     x <- factor(x, levels=varTypeLevels)
     x <- table(x)
@@ -402,31 +414,26 @@ k1 <- !is.na(k)
 vartype[k1] <- k[k1]
 
 
-k <- vartype_tbl$variantType_jurkat_dna_merged == "NA"
-vartype_tbl$variantType_jurkat_dna_merged[k] <- vartype[k]
+k <- vartype_tbl[,variantType_jurkat_truth] == "NA"
+vartype_tbl [,variantType_jurkat_truth] [k] <- vartype[k]
 
 ### don't separate by indel type
-vartype_tbl$variantType_jurkat_dna_merged <- recode(
-  vartype_tbl$variantType_jurkat_dna_merged,
+vartype_tbl[,variantType_jurkat_truth] <- recode(
+  vartype_tbl[,variantType_jurkat_truth],
   "deletion"="indel", "insertion"="indel"
 )
-table(vartype_tbl$variantType_jurkat_dna_merged)
+table(vartype_tbl[,variantType_jurkat_truth])
 
 
-dat1$varaint_type <- vartype_tbl$variantType_jurkat_dna_merged
+dat1$varaint_type <- vartype_tbl[,variantType_jurkat_truth]
 dat1 <- filter( dat1, !(varaint_type %in% c("NA", "hetAlt", "homRef")) )
 dim(dat1)
-dat1 <- select(dat1, in_dv_s_fc, in_c3_mix, in_gatk_s, in_jurkat_dna_merged, varaint_type)
+dat1 <- select(dat1, in_dv_s_fc, in_c3_mix, in_gatk_s, all_of(in_jurkat_truth), varaint_type)
 dat1$varaint_type <- recode(dat1$varaint_type, "indel"="Indels", "snp"="SNPs")
 dat1 <- rename(dat1, "SNCR+fC+DV"="in_dv_s_fc", "Clair3-mix"="in_c3_mix",
-               "SNCR+GATK"="in_gatk_s", "Ground truth"="in_jurkat_dna_merged",
+               "SNCR+GATK"="in_gatk_s", "Ground truth"=all_of(in_jurkat_truth),
                "Varaint Type"="varaint_type")
 
-# p <- UpSetR:upset(dat1, order.by = "freq")
-# fp <- file.path(OUTPUT_DIR, "upsetPlot_bestMethods_jurkat.png")
-# png(fp, width=700)
-# p
-# dev.off()
 
 p_1e <- upset(
   dat1,
@@ -485,7 +492,7 @@ dat1 <- filter(dat_wtc11, isoSeq_coverage >= 30)
 dim(dat1)
 
 ### filter out variant that are not in the ground truth and not called by any method
-k <- select(dat1, in_dv_s_fc, in_c3_mix, in_gatk_s, in_allen) %>% 
+k <- select(dat1, in_dv_s_fc, in_c3_mix, in_gatk_s, all_of(in_wtc11_truth)) %>% 
   apply(1, function(x) all(x==0))
 dat1 <- dat1[!k,]
 dim(dat1)
@@ -498,16 +505,18 @@ dat1[,k] <- lapply(dat1[,k], function(x){
 })
 
 ### decide the type of the variants
-vartype_tbl <- select(dat1, variantType_allen, variantType_dv_s_fc,
+variantType_wtc11_truth <- paste0("variantType_", TRUTH_NAME_WTC11)
+vartype_tbl <- select(dat1, variantType_dv_s_fc,
                       variantType_c3_mix, variantType_gatk_s,
-                      variantType_allen)
+                      all_of(variantType_wtc11_truth))
 
 # first criterion: definition by the ground truth
 # second criterion: it the ground truth doens't know the variant type, consider what
 # the methods say.
-truth_is_na <- vartype_tbl$variantType_allen == "NA"
+truth_is_na <- vartype_tbl[,variantType_wtc11_truth] == "NA"
 varTypeLevels <- c("deletion", "hetAlt", "homRef", "insertion", "NA", "snp")
-typeCounts <- subset(vartype_tbl, select=-variantType_allen) %>% 
+k <- names(vartype_tbl) != variantType_wtc11_truth
+typeCounts <- vartype_tbl[,k] %>% 
   apply(1, function(x){
     x <- factor(x, levels=varTypeLevels)
     x <- table(x)
@@ -552,32 +561,26 @@ k1 <- !is.na(k)
 vartype[k1] <- k[k1]
 
 
-k <- vartype_tbl$variantType_allen == "NA"
-vartype_tbl$variantType_allen[k] <- vartype[k]
+k <- vartype_tbl[,variantType_wtc11_truth] == "NA"
+vartype_tbl [,variantType_wtc11_truth] [k] <- vartype[k]
 
 ### don't separate by indel type
-vartype_tbl$variantType_allen <- recode(
-  vartype_tbl$variantType_allen,
+vartype_tbl[,variantType_wtc11_truth] <- recode(
+  vartype_tbl[,variantType_wtc11_truth],
   "deletion"="indel", "insertion"="indel"
 )
-table(vartype_tbl$variantType_allen)
+table(vartype_tbl[,variantType_wtc11_truth])
 
 
-dat1$varaint_type <- vartype_tbl$variantType_allen
+dat1$varaint_type <- vartype_tbl[,variantType_wtc11_truth]
 dat1 <- filter( dat1, !(varaint_type %in% c("NA", "hetAlt", "homRef")) )
 dim(dat1)
-dat1 <- select(dat1, in_dv_s_fc, in_c3_mix, in_gatk_s, in_allen, varaint_type)
+dat1 <- select(dat1, in_dv_s_fc, in_c3_mix, in_gatk_s, all_of(in_wtc11_truth), varaint_type)
 dat1$varaint_type <- recode(dat1$varaint_type, "indel"="Indels", "snp"="SNPs")
 dat1 <- rename(dat1, "SNCR+fC+DV"="in_dv_s_fc", "Clair3-mix"="in_c3_mix",
-               "SNCR+GATK"="in_gatk_s", "Ground truth"="in_allen",
+               "SNCR+GATK"="in_gatk_s", "Ground truth"=all_of(in_wtc11_truth),
                "Varaint Type"="varaint_type")
 
-
-# p <- UpSetR:upset(dat1, order.by = "freq")
-# fp <- file.path(OUTPUT_DIR, "upsetPlot_bestMethods_wtc11.png")
-# png(fp, width=700)
-# p
-# dev.off()
 
 p_1f <- upset(
   dat1,
@@ -628,12 +631,12 @@ fig_1 all together
 
 ```{r}
 # load flagCorrection figure (Fig. 1a)
-k <- file.path(OUTPUT_DIR, "fc_algorithm_be.png")
+k <- file.path(EXTERNAL_FIGS, "fc_algorithm_be.png")
 p_1a <- draw_image(k)
 p_1a <- ggdraw() + p_1a
 
 # load n-cigar schematic figure (Fig. 1c)
-k <- file.path(OUTPUT_DIR, "schematic_n_cigar_reads_explanation_be.png")
+k <- file.path(EXTERNAL_FIGS, "schematic_n_cigar_reads_explanation_be.png")
 p_1c <- draw_image(k)
 p_1c <- ggdraw() + p_1c
 
@@ -680,7 +683,7 @@ p_1 <- plot_grid(p_abc, p_def,
                  labels=NULL, ncol=1, rel_heights=c(1, .9),
                  label_size=28)
 
-fp <- file.path(OUTPUT_DIR, "fig_1.png")
+fp <- file.path(OUTPUT_DIR, "paper_final_figures/fig_1.png")
 png(fp, width=1000, height=1300)
 p_1
 dev.off()
@@ -696,8 +699,8 @@ dev.off()
 ```{r}
 # load the data to make the plots
 # this load the objects: sj_proximity_snps, sj_proximity_indels
-# these objects were created in the script: /home/vbarbo/project_2021/projects/lrRNA-seq_variant_calling/2_data_manipulation_and_pre_analysis/splice_junction_proximity_analysis/splice_junction_proximity.R
-load("~/load_later/near_splice_junctions/data_needed_to_make_the_chart.Rdata")
+# these objects were created in the script: lrRNAseqVariantCalling/4_pre_analysis/1_splice_junction_proximity_analysis/splice_junction_proximity.R
+load("/home/vbarbo/project_2021/paper_analysis/extra_files/splice_junction_proximity_analysis.Rdata")
 
 
 ####################
@@ -777,14 +780,12 @@ dev.off()
 
 ```{r}
 # load the data to make the plot.
-# this loads the object: dat_full
-# # it was created in the script: /home/vbarbo/project_2021/projects/variantCallingFromIsoSeq/scripts_for_all_analyses_in_the_paper/homopolymer_analysis/identify_indels_within_and_outside_homopolimer_repeats.R
-load("~/load_later/homopolymer_analysis/all_methods_info_mtFilteredV5_filterVariantDensityIsoSeq_noNearSJ.RData")
-
-# load("~/load_later/homopolymer_analysis/all_methods_info_mtFilteredV5_filterVariantDensityIsoSeq_noNearSJ_isoSeqCover20.RData")
+# this loads the object: dat_homopolymer
+# it was created in the script: lrRNAseqVariantCalling/4_pre_analysis/2_homopolymer_analysis/identify_indels_within_and_outside_homopolimer_repeats.R
+load("/home/vbarbo/project_2021/paper_analysis/extra_files/dat_homopolymer_analysis.RData")
 
 
-dat_full <- lapply(dat_full, function(x){
+dat_homopolymer <- lapply(dat_homopolymer, function(x){
   x$variant_type <- recode(x$variant_type, "deletion"="Deletion",
                            "insertion"="Insertion")
   x$method <- recode(x$method, "Clair3 mix"="Clair3-mix",
@@ -796,7 +797,7 @@ dat_full <- lapply(dat_full, function(x){
 
 method_cols <- hue_pal()(9)[c(2,5,8)]
 
-p_2c <- ggplot(dat_full$class_counts,
+p_2c <- ggplot(dat_homopolymer$class_counts,
             aes(x=.data$homopolymer_length_intervals, y=.data$percent,
                 group=.data$`Performance measures`, colour=.data$`Performance measures`)) +
   facet_grid(variant_type~method) +
@@ -807,7 +808,7 @@ p_2c <- ggplot(dat_full$class_counts,
   xlab("Homopolymer length") +
   ylab("Score") +
   theme(text = element_text(size=20)) +
-  geom_text( data=dat_full$dat_text, mapping= aes(x=x, y=y, label=label), size=5 ) +
+  geom_text( data=dat_homopolymer$dat_text, mapping= aes(x=x, y=y, label=label), size=5 ) +
   scale_color_manual(values=method_cols) +
   guides(colour = guide_legend(override.aes = list(size = 1, shape = 11))) +
   theme(legend.position="bottom") +
@@ -924,7 +925,7 @@ dat <- calculate_precision_recall_for_multi_master_tables(
   method_names = c("dv", "dv_s", "dv_s_fc"),
   output_method_names = output_method_names,
   data_names = "isoSeq",
-  truth_names = c("jurkat_dna_merged", "allen"),
+  truth_names = c(TRUTH_NAME_JURKAT, TRUTH_NAME_WTC11),
   coverage_thresholds = c(3, 15, 40, 100),
   what = "snps_indels"
 )
@@ -986,7 +987,7 @@ p_s2 <- p_s2 +
   NULL
 
 
-fp <- file.path(OUTPUT_DIR, "deepvariantPipelines_perCoverrage_indelSnpSepareted.png")
+fp <- file.path(OUTPUT_DIR, "paper_final_figures/fig_s2.png")
 png(fp, width=900)
 p_s2
 dev.off()
@@ -996,21 +997,14 @@ dev.off()
 ### (Fig. S3) correlation between n-cigar-read proportion and read coverage
 
 ```{r}
-load("/home/vbarbo/load_later/homopolymer_analysis/mt_wtc11_allMethods_filtered_v5_filterVariantDensityIsoSeqAllMethods.RData")
-dat_wtc11 <- mt_wtc11_allMethods_filtered_filterVariantDensityIsoSeqAllMethods
+dat_wtc11 <- mt_wtc11_allMethods_filtered
 
 dat_wtc11 <- mutate(dat_wtc11, totalNumReads= isoSeq_ncr_num + isoSeq_coverage)
 dat_wtc11 <- mutate(dat_wtc11, ncr_proportion= isoSeq_ncr_num / totalNumReads)
 
-dat_wtc11 <- filter(dat_wtc11, variantDensity_allen<=1 & 
-                      variantDensity_dv_dvS_dvSFc_c3_c3S_c3SFc_c3Mix_gatkS<=1)
+dat_wtc11 <- filter(dat_wtc11, variantDensity_dv_dvS_dvSFc_c3_c3S_c3SFc_c3Mix_gatkS_ncS <= 1)
+
 dat_wtc11 <- filter(dat_wtc11, is_near_ss==0)
-
-# dat_wtc11 <- filter(dat_wtc11,totalNumReads>=10)
-
-# dat_wtc11 <- filter(dat_wtc11,isoSeq_coverage<30000)
-
-# dat_wtc11 <- mutate(dat_wtc11, log10_isoSeq_coverage=log10(isoSeq_coverage))
 
 
 ### this plot is good, but the legend is missing
@@ -1035,10 +1029,9 @@ dat_wtc11 <- filter(dat_wtc11, is_near_ss==0)
 
 dat1 <- filter(dat_wtc11, isoSeq_coverage<2000)
 
-# library(MASS)
-library(viridis)
+
 get_density <- function(x, y, ...) {
-  dens <- MASS::kde2d(x, y, ...)
+  dens <- kde2d(x, y, ...)
   ix <- findInterval(x, dens$x)
   iy <- findInterval(y, dens$y)
   ii <- cbind(ix, iy)
@@ -1056,7 +1049,7 @@ p_s3 <- ggplot(dat1) +
   # theme(legend.position="bottom") +
   NULL
 
-fp <- file.path(OUTPUT_DIR, "correlation_nCigarReadProportion_coverage.png")
+fp <- file.path(OUTPUT_DIR, "paper_final_figures/fig_s3.png")
 png(fp, width=600)
 p_s3
 dev.off()
@@ -1088,36 +1081,30 @@ dev.off()
 ### (Fig. S4) compare pipelines that use DeepVariant, per proportion of n-cigar reads
 
 ```{r}
+### range of iso-seq read coverage
 cover <- c(10,20)
 
 
 dat_jurkat <- mt_jurkat_allMethods_filtered
-# ##################### if i filter by iso-seq vanraint dentisy (all methods) the result much better.
-# METHOD_NAMES <- c("dv", "dv_s", "dv_s_fc", "c3", "c3_s", "c3_s_fc", "gatk_s")
-# dat_jurkat <- add_variant_density_of_a_method(dat_jurkat, 201, METHOD_NAMES)
-# k <- dat_jurkat$variantDensity_dv_dvS_dvSFc_c3_c3S_c3SFc_gatkS <= 3
-# dat_jurkat <- dat_jurkat[k,]
-# # dat_jurkat <- filter(dat_jurkat, is_near_ss==0)
-# #####################
+# if i filter by iso-seq vanraint dentisy (all methods) the result is much better.
+k <- dat_jurkat$variantDensity_dv_dvS_dvSFc_c3_c3S_c3SFc_c3Mix_gatkS_ncS <= 3
+dat_jurkat <- dat_jurkat[k,]
+# dat_jurkat <- filter(dat_jurkat, is_near_ss==0)
 percent_n_cigar_reads <- dat_jurkat$isoSeq_ncr_num / 
   (dat_jurkat$isoSeq_ncr_num + dat_jurkat$isoSeq_coverage)
 dat_jurkat <- cbind(dat_jurkat, percent_n_cigar_reads)
-# dat_jurkat_cover10to20 <- filter(dat_jurkat, isoSeq_coverage>=cover[1] & isoSeq_coverage<=cover[2])
-dat_jurkat_cover10to20 <- filter(dat_jurkat, isoSeq_coverage==cover[1])
+dat_jurkat_cover10to20 <- filter(dat_jurkat, isoSeq_coverage>=cover[1] & isoSeq_coverage<=cover[2])
+
 
 dat_wtc11 <- mt_wtc11_allMethods_filtered
-# ##################### if i filter by iso-seq vanraint dentisy (all methods) the result much better.
-# METHOD_NAMES <- c("dv", "dv_s", "dv_s_fc", "c3", "c3_s", "c3_s_fc", "gatk_s")
-# dat_wtc11 <- add_variant_density_of_a_method(dat_wtc11, 201, METHOD_NAMES)
-# k <- dat_wtc11$variantDensity_dv_dvS_dvSFc_c3_c3S_c3SFc_gatkS <= 3
-# dat_wtc11 <- dat_wtc11[k,]
-# # dat_wtc11 <- filter(dat_wtc11, is_near_ss==0)
-# #####################
+# if i filter by iso-seq vanraint dentisy (all methods) the result much better.
+k <- dat_wtc11$variantDensity_dv_dvS_dvSFc_c3_c3S_c3SFc_c3Mix_gatkS_ncS <= 3
+dat_wtc11 <- dat_wtc11[k,]
+# dat_wtc11 <- filter(dat_wtc11, is_near_ss==0)
 percent_n_cigar_reads <- dat_wtc11$isoSeq_ncr_num / 
   (dat_wtc11$isoSeq_ncr_num + dat_wtc11$isoSeq_coverage)
 dat_wtc11 <- cbind(dat_wtc11, percent_n_cigar_reads)
-# dat_wtc11_cover10to20 <- filter(dat_wtc11, isoSeq_coverage>=cover[1] & isoSeq_coverage<=cover[2])
-dat_wtc11_cover10to20 <- filter(dat_wtc11, isoSeq_coverage==cover[1])
+dat_wtc11_cover10to20 <- filter(dat_wtc11, isoSeq_coverage>=cover[1] & isoSeq_coverage<=cover[2])
 
 
 
@@ -1165,11 +1152,11 @@ table( findInterval(dat_wtc11_cover10to20$percent_n_cigar_reads,
 
 experiment_names <- c("jurkat", "wtc11")
 method_names <- c("dv", "dv_s", "dv_s_fc")
-output_method_names = c("DeepVariant", "SNCR+DeepVariant", "SNCR+flagCorrection+DeepVariant")
+output_method_names <- c("DeepVariant", "SNCR+DeepVariant", "SNCR+flagCorrection+DeepVariant")
 # method_names <- c("c3", "c3_s", "c3_s_fc")
 # output_method_names = c("Clair3", "SNCR+Clair3", "SNCR+flagCorrection+Clair3")
 data_names <- "isoSeq"
-truth_names <- c("jurkat_dna_merged", "allen")
+truth_names <- c(TRUTH_NAME_JURKAT, TRUTH_NAME_WTC11)
 what <- "snps_indels"
 
 dat <- calculate_precision_recall_for_n_cigar_read_count_intervarls(
@@ -1246,7 +1233,7 @@ p_s4 <- p_s4 +
   NULL
 
 
-fp <- file.path(OUTPUT_DIR, "deepvariantPipelines_perNCigarReadCount_indelSnpSepareted_cover10.png")
+fp <- file.path(OUTPUT_DIR, "paper_final_figures/fig_s4.png")
 png(fp, width=900, height=650)
 p_s4
 dev.off()
@@ -1269,7 +1256,7 @@ dat <- calculate_precision_recall_for_multi_master_tables(
   method_names = c("c3", "c3_s", "c3_s_fc"),
   output_method_names = output_method_names,
   data_names = "isoSeq",
-  truth_names = c("jurkat_dna_merged", "allen"),
+  truth_names = c(TRUTH_NAME_JURKAT, TRUTH_NAME_WTC11),
   coverage_thresholds = c(3, 15, 40, 100),
   what = "snps_indels"
 )
@@ -1330,7 +1317,7 @@ p_s5 <- p_s5 +
   NULL
 
 
-fp <- file.path(OUTPUT_DIR, "clair3Pipelines_perCoverrage_indelSnpSepareted.png")
+fp <- file.path(OUTPUT_DIR, "paper_final_figures/fig_s5.png")
 png(fp, width=900, height=650)
 p_s5
 dev.off()
@@ -1353,7 +1340,7 @@ dat <- calculate_precision_recall_for_multi_master_tables(
   method_names = c("nc_s"),
   output_method_names = output_method_names,
   data_names = "isoSeq",
-  truth_names = c("jurkat_dna_merged", "allen"),
+  truth_names = c(TRUTH_NAME_JURKAT, TRUTH_NAME_WTC11),
   coverage_thresholds = c(3, 15, 40, 100),
   what = "snps_indels"
 )
@@ -1405,8 +1392,6 @@ p_s6 <- p_s6 +
 
 
 ### add more f1-score values
-p_s6 <- p_s6_bk
-
 f1 <- seq(.1, .8, by=.1)
 x <- sapply(f1, calc_precision, rec=.78) + .01
 p_s6 <- p_s6 +
@@ -1416,7 +1401,7 @@ p_s6 <- p_s6 +
   NULL
 
 
-fp <- file.path(OUTPUT_DIR, "sncrNaocaller_perCoverrage_indelSnpSepareted.png")
+fp <- file.path(OUTPUT_DIR, "paper_final_figures/fig_s6.png")
 png(fp, width=900, height=650)
 p_s6
 dev.off()
@@ -1442,7 +1427,7 @@ dat <- calculate_precision_recall_for_multi_master_tables(
   method_names = c("dv_s_fc", "c3_mix", "gatk_s"),
   output_method_names = c("SNCR+fC+DV", "Clair3-mix", "SNCR+GATK"),
   data_names = "isoSeq",
-  truth_names = c("jurkat_dna_merged", "allen"),
+  truth_names = c(TRUTH_NAME_JURKAT, TRUTH_NAME_WTC11),
   coverage_thresholds = c(3, 15, 40, 100),
   what = "snps_indels"
 )
@@ -1457,82 +1442,8 @@ dat$Variant_type <- factor(dat$Variant_type, levels=c("Indels", "SNPs"), ordered
 dat$Pipeline <- factor(dat$Pipeline, levels=c("SNCR+fC+DV", "Clair3-mix", "SNCR+GATK"), ordered=TRUE)
 
 dat <- arrange(dat, Dataset, Variant_type, Mim_coverage, Pipeline)
-dat
 
-write.table(dat, file="~/keita/best_pipelines_performance_table.txt", row.names=FALSE, quote=FALSE, sep="\t")
-```
-
-
-
-
-### tables not included in the paper
-
-#### compare the deepvariant-based pipelines
-
-```{r}
-dat_jurkat <- mt_jurkat_allMethods_filtered
-dat_wtc11 <- mt_wtc11_allMethods_filtered
-
-
-dat <- calculate_precision_recall_for_multi_master_tables(
-  dat_jurkat,
-  dat_wtc11,
-  experiment_names = c("Jurkat", "WTC-11"),
-  method_names = c("dv", "dv_s", "dv_s_fc"),
-  output_method_names = c("DV", "SNCR+DV", "SNCR+fC+DV"),
-  data_names = "isoSeq",
-  truth_names = c("jurkat_dna_merged", "allen"),
-  coverage_thresholds = c(3, 15, 40, 100),
-  what = "snps_indels"
-)
-dat$variant <- recode(dat$variant, "snps"="SNPs", "indels"="Indels")
-
-dat[,1:3] <- round(dat[,1:3], 3)
-
-names(dat) <- c("Precision", "Recall", "F1-score", "Variant_type", "Pipeline", "Mim_coverage", "Dataset")
-dat <- select(dat, "Dataset", "Variant_type", "Mim_coverage", "Pipeline", "Precision", "Recall", "F1-score")
-dat$Dataset <- factor(dat$Dataset, levels=c("Jurkat", "WTC-11"), ordered=TRUE)
-dat$Variant_type <- factor(dat$Variant_type, levels=c("Indels", "SNPs"), ordered=TRUE)
-dat$Pipeline <- factor(dat$Pipeline, levels=c("DV", "SNCR+DV", "SNCR+fC+DV"), ordered=TRUE)
-
-dat <- arrange(dat, Dataset, Variant_type, Mim_coverage, Pipeline)
-(dat_dv <- dat)
-
-write.table(dat, file="~/keita/deepvariant_pipelines_performance_table.txt", row.names=FALSE, quote=FALSE, sep="\t")
-```
-
-
-#### (Table 1) compare the best pipelines
-
-```{r}
-dat_jurkat <- mt_jurkat_allMethods_filtered
-dat_wtc11 <- mt_wtc11_allMethods_filtered
-
-
-dat <- calculate_precision_recall_for_multi_master_tables(
-  dat_jurkat,
-  dat_wtc11,
-  experiment_names = c("Jurkat", "WTC-11"),
-  method_names = c("c3", "c3_s", "c3_s_fc"),
-  output_method_names = c("Clair3", "SNCR+Clair3", "SNCR+fC+Clair3"),
-  data_names = "isoSeq",
-  truth_names = c("jurkat_dna_merged", "allen"),
-  coverage_thresholds = c(3, 15, 40, 100),
-  what = "snps_indels"
-)
-dat$variant <- recode(dat$variant, "snps"="SNPs", "indels"="Indels")
-
-dat[,1:3] <- round(dat[,1:3], 3)
-
-names(dat) <- c("Precision", "Recall", "F1-score", "Variant_type", "Pipeline", "Mim_coverage", "Dataset")
-dat <- select(dat, "Dataset", "Variant_type", "Mim_coverage", "Pipeline", "Precision", "Recall", "F1-score")
-dat$Dataset <- factor(dat$Dataset, levels=c("Jurkat", "WTC-11"), ordered=TRUE)
-dat$Variant_type <- factor(dat$Variant_type, levels=c("Indels", "SNPs"), ordered=TRUE)
-dat$Pipeline <- factor(dat$Pipeline, levels=c("Clair3", "SNCR+Clair3", "SNCR+fC+Clair3"), ordered=TRUE)
-
-dat <- arrange(dat, Dataset, Variant_type, Mim_coverage, Pipeline)
-(dat_c3 <- dat)
-
-write.table(dat, file="~/keita/clair3_pipelines_performance_table.txt", row.names=FALSE, quote=FALSE, sep="\t")
+fp <- file.path(OUTPUT_DIR, "paper_final_figures/best_pipelines_performance_table.txt")
+write.table(dat, file=fp, row.names=FALSE, quote=FALSE, sep="\t")
 ```
 
