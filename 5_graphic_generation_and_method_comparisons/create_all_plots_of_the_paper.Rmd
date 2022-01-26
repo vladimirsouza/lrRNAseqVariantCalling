@@ -824,14 +824,14 @@ dev.off()
 
 ```{r}
 # load the data to make the plot
-# this loads the object: datf
-# it was created in the script: ~/project_2021/projects/variantCallingFromIsoSeq/scripts_for_all_analyses_in_the_paper/ase_analysis/identify_ase_snps.R
-load("~/load_later/ase_analysis/all_methods_info_to_plot.RData")
+# this loads the object: dat_ase
+# it was created in the script: /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/4_pre_analysis/3_ase_analysis/2_identify_ase_snps.R
+load("/home/vbarbo/project_2021/paper_analysis/extra_files/dat_ase_analysis.RData")
 
-datf$method <- recode(datf$method, "Clair3 mix"="Clair3-mix",
+dat_ase$method <- recode(dat_ase$method, "Clair3 mix"="Clair3-mix",
                       "SNCR+FC+DeepVariant"="SNCR+fC+DeepVariant")
 
-# p <- ggplot(datf, aes(x=ASE_Identification, y=Ratio, fill=Classification)) +
+# p <- ggplot(dat_ase, aes(x=ASE_Identification, y=Ratio, fill=Classification)) +
 #   facet_grid(.~method) +
 #   geom_bar(stat="identity", position=position_dodge()) +
 #   geom_text(aes(label=round(Ratio,2)), vjust=1.6, color="white",
@@ -841,14 +841,14 @@ datf$method <- recode(datf$method, "Clair3 mix"="Clair3-mix",
 #   xlab("Allele specific expression identification") +
 #   NULL
 
-datf <- mutate(datf, ASE_Identification=recode(datf$ASE_Identification,
+dat_ase <- mutate(dat_ase, ASE_Identification=recode(dat_ase$ASE_Identification,
                                                "Non ASE"="Non\nASE"))
-datf$text_hjust <- ifelse(datf$Classification=="TP", 1.1, -0.1)
+dat_ase$text_hjust <- ifelse(dat_ase$Classification=="TP", 1.1, -0.1)
 
-p_2d <- ggplot(datf, aes(x=ASE_Identification, y=Ratio, fill=Classification)) +
+p_2d <- ggplot(dat_ase, aes(x=ASE_Identification, y=Ratio, fill=Classification)) +
   facet_grid(method~.) +
   geom_bar(stat="identity", position=position_dodge()) +
-  geom_text(aes(label=round(Ratio,2)), vjust=.5, color="gray40", hjust=datf$text_hjust,
+  geom_text(aes(label=round(Ratio,2)), vjust=.5, color="gray40", hjust=dat_ase$text_hjust,
             position = position_dodge(.9), size=6)+
   theme(text = element_text(size = 18)) +
   ylim(0,1) +
@@ -868,10 +868,10 @@ fig_2 all together
 ```{r}
 p_2c$layers
 p_2c$layers[[3]] <- NULL
-dat_full$dat_text$y <- dat_full$dat_text$y*1.07
+dat_homopolymer$dat_text$y <- dat_homopolymer$dat_text$y*1.07
 p_2c <- p_2c +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
-  geom_text( data=dat_full$dat_text, mapping= aes(x=x, y=y, label=label),
+  geom_text( data=dat_homopolymer$dat_text, mapping= aes(x=x, y=y, label=label),
              size=4, angle=15 ) +
   scale_y_continuous(breaks = seq(.25, 1, by = .25))
 
@@ -897,7 +897,7 @@ p_cd <- plot_grid(p_2c, NULL, p_2d,
 p_2 <- plot_grid(p_ab, NULL, p_cd,
                  labels=NULL, ncol=1, rel_heights=c(.8, .05, 1))
 
-fp <- file.path(OUTPUT_DIR, "fig_2.png")
+fp <- file.path(OUTPUT_DIR, "paper_final_figures/fig_2.png")
 png(fp, width=1000, height=1000)
 p_2
 dev.off()
@@ -1145,9 +1145,6 @@ end_n_cigar_read_percent_intervals <-   tail( seq(0,1, length.out=n_interval+1),
 
 table( findInterval(dat_wtc11_cover10to20$percent_n_cigar_reads,
                     start_n_cigar_read_percent_intervals) )
-
-# keita[[i]] <- table( findInterval(dat_wtc11_cover10to20$percent_n_cigar_reads,
-#                     start_n_cigar_read_percent_intervals) )
 
 
 experiment_names <- c("jurkat", "wtc11")
