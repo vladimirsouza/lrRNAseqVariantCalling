@@ -3,7 +3,7 @@
 
 
 ### inputs
-FLNC_BAM=/home/vbarbo/project_2021/paper_analysis/jurkat/data/rna_iso_seq/jurkat.flnc.bam
+FLNC_BAM=/home/vbarbo/project_2021/paper_analysis/jurkat/data/iso_seq/jurkat.flnc.bam
 REF=/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta
 OUTPUT_DIR=/home/vbarbo/project_2021/paper_analysis/jurkat/data_manipulation
 THREADS=30
