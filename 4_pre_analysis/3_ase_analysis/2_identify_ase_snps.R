@@ -5,9 +5,9 @@
 
 
 
-
 ### inputs
-allele_counts_file <- "/home/vbarbo/project_2021/datasets/wtc11/ase_analysis/GSE175048_ENCSR673UKZ/ase_read_count_tables/ase_read_count_all.table"
+ALLELE_COUNTS_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/ase_analysis/ase_read_count_tables/ase_read_count_all.table"
+FILTERED_MASTER_TABLE <- "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_filtered_v7.RData"
 
 
 ### packages
@@ -16,7 +16,7 @@ library(readr)
 
 
 ### load allele counts
-allele_counts <- read_tsv(allele_counts_file)
+allele_counts <- read_tsv(ALLELE_COUNTS_FILE)
 
 
 ### add column of p-values for ase identification
@@ -40,8 +40,8 @@ allele_p <- subset(allele_counts,
                    select=c("chrm", "pos", "refCount", "altCount",
                             "totalCount", "otherBases", "ase_chiSquare_adj"))
 
-load("~/project_2021/scripts/paper_1/master_tables/wtc11/mt_wtc11_allMethods_filtered_v5.RData")
-dat <- mt_wtc11_allMethods_filtered
+k <- load(FILTERED_MASTER_TABLE)
+dat <- get(k)
 dat1 <- merge(dat, allele_p, by=c("chrm", "pos"), all.x=TRUE, sort=FALSE)
 
 
@@ -62,7 +62,7 @@ dat2 <- filter(dat2, totalCount>=40)
 ### non-ASE variants are different
 k <- table(dat2$dv_s_fc_classification, dat2$ase_chiSquare_adj<.05)
 k <- k[rownames(k) %in% c("FN", "TP"),]
-chisq.test(k)$p.value  # 1.465621e-42
+chisq.test(k)$p.value  # 5.809803e-43
 
 
 
@@ -117,8 +117,6 @@ datf_c3Mix <- datf
 
 
 ### put all tables together in a single table
-
-
 datf_dvSFc$method <- "SNCR+FC+DeepVariant"
 datf_c3Mix$method <- "Clair3 mix"
 datf_gatkS$method <- "SNCR+GATK"
@@ -126,5 +124,7 @@ datf <- rbind(datf_dvSFc, datf_c3Mix, datf_gatkS)
 k <- c("SNCR+FC+DeepVariant", "Clair3 mix", "SNCR+GATK")
 datf$method <- factor(datf$method, levels=k, ordered=TRUE)
 
-save(datf, file="~/load_later/ase_analysis/all_methods_info_to_plot.RData")
+dat_ase <- datf
+
+save(datf, file="/home/vbarbo/project_2021/paper_analysis/extra_files/dat_ase_analysis.RData")
 
