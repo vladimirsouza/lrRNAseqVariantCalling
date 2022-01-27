@@ -6,16 +6,14 @@
 # The input parameters are (following the right order):
 # * `ORI_BAM`, path of the original BAM file, BAM before spliting reads with GATK's SplitNCigarReads (SNCR) function;
 # * `SNCR_BAM`, path of the split BAM file, BAM after spliting reads with SNCR;
-# * `OUTPUT_DIR`, path of the directory to write the output BAM file;
-# * `OUTPUT_BAM_NAME`, name of the output BAM file, the '.bam' extension is added in case it is missing; and
+# * `OUTPUT_BAM`, path of the output BAM file to be written, the '.bam' extension is added in case it is missing; and
 # * `THREADS`, number of cores to use.
 #
 # To run flagCorrection:
 # Rscript $PATH_TO_FLAGCORRECTION/flagCorrection.r \
 #   $ORI_BAM \
 #   $SNCR_BAM \
-#   $OUTPUT_DIR \
-#   $OUTPUT_BAM_NAME \
+#   $OUTPUT_BAM \
 #   $THREADS
 
 
@@ -24,9 +22,8 @@ time1 <- Sys.time()
 
 ORI_BAM=commandArgs(TRUE)[1]
 SNCR_BAM=commandArgs(TRUE)[2]
-OUTPUT_DIR=commandArgs(TRUE)[3]
-OUTPUT_BAM_NAME=commandArgs(TRUE)[4]
-THREADS=as.integer(commandArgs(TRUE)[5])
+OUTPUT_BAM=commandArgs(TRUE)[3]
+THREADS=as.integer(commandArgs(TRUE)[4])
 
 
 ### load packages
@@ -38,11 +35,12 @@ library(doParallel)
 ### test inputs
 if( !file.exists(ORI_BAM) ) stop( gettextf("File %s doesn't exist", ORI_BAM) )
 if( !file.exists(SNCR_BAM) ) stop( gettextf("File %s doesn't exist", SNCR_BAM) )
-if( !dir.exists(OUTPUT_DIR) ) stop( gettextf("Directory %s doesn't exist", OUTPUT_DIR) )
+output_dir <- dirname(OUTPUT_BAM)
+if( !dir.exists(output_dir) ) stop( gettextf("Directory %s doesn't exist", output_dir) )
 
 
 ### create temp dir
-temp_dir <- tempfile("flagCorrection_temp_dir_", tmpdir=OUTPUT_DIR)
+temp_dir <- tempfile("flagCorrection_temp_dir_", tmpdir=output_dir)
 dir.create(temp_dir)
 
 
@@ -129,16 +127,15 @@ result <- foreach(chr_names_i = chr_names,
 unlink( c(corrected_flags_files, bam_header) )
 
 
-### output bam path
-output_bam <- file.path(OUTPUT_DIR, OUTPUT_BAM_NAME)
-if( !grepl("\\.bam$", OUTPUT_BAM_NAME) ){
-  output_bam <- paste0(output_bam, ".bam")
+### add .bam extension to the output bam in case it is missing
+if( !grepl("\\.bam$", OUTPUT_BAM) ){
+  OUTPUT_BAM <- paste0(OUTPUT_BAM, ".bam")
 }
 
 
 ### merge bams
 all_bams_to_merge <- paste(final_bams, collapse=" ")
-cmd <- gettextf("samtools merge -c -p -f -@ %i %s %s", THREADS, output_bam, all_bams_to_merge)
+cmd <- gettextf("samtools merge -c -p -f -@ %i %s %s", THREADS, OUTPUT_BAM, all_bams_to_merge)
 system(cmd)
 
 

@@ -58,8 +58,7 @@ gatk --java-options "-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=$THREADS" S
 Rscript $PATH_TO_FC \
   $OUTPUT_DIR/aln.bam \
   $OUTPUT_DIR/aln_sncr.bam \
-  $OUTPUT_DIR \
-  aln_sncr_fc.bam \
+  $OUTPUT_DIR/aln_sncr_fc.bam \
   $THREADS
 
 

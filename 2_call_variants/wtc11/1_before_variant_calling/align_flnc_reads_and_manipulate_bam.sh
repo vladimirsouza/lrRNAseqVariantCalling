@@ -92,8 +92,7 @@ samtools index \
 Rscript $PATH_TO_FC \
   $OUTPUT_DIR/aln_s.bam \
   $OUTPUT_DIR/aln_sncr.bam \
-  $OUTPUT_DIR \
-  aln_sncr_fc.bam \
+  $OUTPUT_DIR/aln_sncr_fc.bam \
   $THREADS
 
 
