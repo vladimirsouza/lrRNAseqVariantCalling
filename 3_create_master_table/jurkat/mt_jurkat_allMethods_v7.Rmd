@@ -74,6 +74,8 @@ TRUTH_BAM_FILE <- "/home/vbarbo/project_2021/paper_analysis/jurkat/ground_truth/
 ### variables
 MAX_DIST_FROM_SPLICE_SITE <- 20
 THREADS <- 30
+
+GENOME_REF_FILE <- "/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta"
 ```
 
 
@@ -162,7 +164,7 @@ dat <- add_splice_site_info_to_master_table(
 
 ## Add the read coverage (from the BAM file) of each variant
 
-Add read coverage of each dataset.
+Add iso-seq read coverage.
 
 ```{r}
 method_coverage <- coverage(METHOD_BAM_FILE)
@@ -370,13 +372,10 @@ dat[,sel_cols] [k] <- "0/0"
 ```
 
 
-## homopolymer lengths of all sites (meaninless for "spns" and "hetAlt")
+## add homopolimer length (from reference FASTA), but only for 0/1 and 1/1 genotypes and indels
 
 ```{r}
-library(Biostrings)
-genome_ref_file <- "/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta"
-genome_ref <- readDNAStringSet(genome_ref_file)
-library(sarlacc)
+genome_ref <- readDNAStringSet(GENOME_REF_FILE)
 homopolymers <- homopolymerFinder(genome_ref)
 names(homopolymers) <- sub("(^chr[0-9]+|X|Y).*", "\\1", names(homopolymers))
 
