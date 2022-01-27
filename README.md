@@ -3,7 +3,7 @@
 
 This repository contains all the code used for the manuscript *Transformation of alignment files improves the performance of variant callers for long-read RNA sequencing data* (DOI: XXX). The order in which the scripts were run is indicated by numbers in their names or folders.
 
-In the manuscript, we present a pipeline to increase the performance of the variant callers `DeepVariant` and `Clair3` on Iso-Seq data. This pipeline consists of using `minimp2` (to align reads to a reference genome), `GATK`'s `SplitNCigarReads` function (to split reads at intronic regions), `flagCorrection` (a tool developed by us to manipulate BAM files output by `SplitNCigarReads` to make them adequate for deep learning-based variant callers), and a variant caller (we suggest `DeepVariant` or `Clair3`). The generic code for this pipeline is showed below.
+In the manuscript, we present a pipeline to increase the performance of the variant callers `DeepVariant` and `Clair3` on long-read RNA-seq Iso-Seq data. This pipeline consists of using `minimap2` (to align reads to a reference genome), `GATK`'s `SplitNCigarReads` function (to split reads at intronic regions), `flagCorrection` (a tool developed by us to manipulate BAM files output by `SplitNCigarReads` to make them adequate for deep learning-based variant callers), and a variant caller (we suggest `DeepVariant` or `Clair3`). The generic code for this pipeline is shown below.
 
 ## Tools required to be installed
 
@@ -27,17 +27,15 @@ To install the `R` packages, run `R` and enter the following code:
 ```R
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
-BiocManager::install("Rsamtools")
-
-install.packages(c("foreach", "doParallel"))
+BiocManager::install(c("foreach", "doParallel", "Rsamtools"))
 ```
 
 ## Installing and running flagCorrection
 
-To install `flagCorrection`, simply clone this repository in a directory that suits you with command
+To install `flagCorrection`, simply clone this repository with the command
 
 ```
-git clone git@github.com:vladimirsouza/lrRNAseqVariantCalling.git
+git clone https://github.com/vladimirsouza/lrRNAseqVariantCalling.git
 ```
 
 To run `flagCorrection`, use a command that looks like
@@ -60,7 +58,7 @@ where the variables
 
 ## Calling genetic variants from Iso-Seq data
 
-To call variant from Iso-Seq data using our pipeline, the input files are:
+To call variants from Iso-Seq data using our pipeline, the input files are:
 * `INPUT_ISOSEQ_FASTQ`, path to a FASTQ file with CCS (HiFi) reads, the Iso-Seq data from which variants will called;
 * `REF_FASTA`, path to a FASTA file with all chromosomes of the reference genome.
 
@@ -151,7 +149,7 @@ singularity exec --bind ${OUTPUT_DIR}/deepvariant,/usr/lib/locale/ \
 
 ### Alternative for variant calling from Iso-Seq with Clair3
 
-To call variants from Iso-Seq with `Clair3`, we recommend using our pipeline only to call indels, and `Clair3` normally for SNPs, a pipeline that we call as **Clair3-mix***. 
+To call variants from Iso-Seq with `Clair3`, we recommend using our pipeline only to call indels, and `Clair3` normally for SNPs, a pipeline that we call **Clair3-mix*** in the manuscript. 
 
 We define the following variables as:
 * `CLAIR3_DIR`, the path to where Clair3 is installed;
