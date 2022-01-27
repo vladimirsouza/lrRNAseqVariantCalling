@@ -71,6 +71,8 @@ TRUTH_BAM_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth/8
 ### variables
 MAX_DIST_FROM_SPLICE_SITE <- 20
 THREADS <- 30
+
+GENOME_REF_FILE <- "/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta"
 ```
 
 
@@ -125,7 +127,7 @@ dat <- initiate_master_table(
 ```
 
 
-## Add QUAL tag from DeepVariant VCF
+## Add QUAL tag from VCF
 
 ```{r}
 dat <- add_qual_from_vcf(dat, "dv", METHOD_VCF_FILES[1])
@@ -220,11 +222,6 @@ get_coverage_of_specified_chrms(chromoso_names, "truth_coverage_2")
 # since these objects take a long time to be generated, next time load them instead
 save(truth_coverage_1, truth_coverage_2, file="/home/vbarbo/project_2021/paper_analysis/extra_files/truth_coverage_1_2_wtc11.RData")
 
-
-
-dat_bk <- dat
-
-
 ### add short-read coverage to master table. must do it in two steps: first the chromosomes in truth_coverage_1 and lately the ones in truth_coverage_2
 dat_1 <- filter(dat, chrm %in% names(truth_coverage_1))
 dat_2 <- filter(dat, chrm %in% names(truth_coverage_2))
@@ -254,29 +251,6 @@ dat <- add_number_of_n_cigar_reads_to_master_table(
   method_bam, 
   METHOD_DATASET_NAME
 )
-```
-
-
-## Add column to comprare two methods
-
-```{r}
-# dat <- add_two_method_comparison_to_master_table(
-#   dat, 
-#   METHOD_NAMES[1],
-#   METHOD_NAMES[3]
-# )
-# 
-# dat <- add_two_method_comparison_to_master_table(
-#   dat, 
-#   METHOD_NAMES[2],
-#   METHOD_NAMES[3]
-# )
-# 
-# dat <- add_two_method_comparison_to_master_table(
-#   dat, 
-#   METHOD_NAMES[3],
-#   METHOD_NAMES[4]
-# )
 ```
 
 
@@ -447,11 +421,9 @@ dat[,sel_cols] [k] <- "0/0"
 ## add homopolimer length (from reference FASTA), but only for 0/1 and 1/1 genotypes and indels
 
 ```{r}
-genome_ref_file <- "/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta"
-genome_ref <- readDNAStringSet(genome_ref_file)
+genome_ref <- readDNAStringSet(GENOME_REF_FILE)
 homopolymers <- homopolymerFinder(genome_ref)
 names(homopolymers) <- sub("(^chr[0-9]+|X|Y).*", "\\1", names(homopolymers))
-
 
 # save `homopolymers` object to a RData file
 # since this object takes a long time to be generated, next time load it instead
