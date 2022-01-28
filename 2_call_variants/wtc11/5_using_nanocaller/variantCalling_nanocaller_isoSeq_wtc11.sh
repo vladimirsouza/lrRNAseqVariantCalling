@@ -45,3 +45,12 @@ python /home/vbarbo/programs/NanoCaller/scripts/NanoCaller_WGS.py \
   -p ccs
 
 
+### delete temporary files
+rm -r \
+  $OUTPUT_DIR/nc/intermediate_files/ \
+  $OUTPUT_DIR/nc/logs/ \
+  $OUTPUT_DIR/nc_sncr/intermediate_files/ \
+  $OUTPUT_DIR/nc_sncr/logs/ \
+  $OUTPUT_DIR/nc_sncr_fc/intermediate_files/ \
+  $OUTPUT_DIR/nc_sncr_fc/logs/
+

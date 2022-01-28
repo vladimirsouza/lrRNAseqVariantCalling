@@ -150,3 +150,13 @@ Rscript $PATH_TO_REPO/removeRepeatedLowerQualSites.r \
   $OUTPUT_DIR/mix/pileup_pass_mix_norep.recode.vcf.gz
 
 
+
+### delete temporary files
+rm -r \
+  $OUTPUT_DIR/c3/log/ \
+  $OUTPUT_DIR/c3/tmp/ \
+  $OUTPUT_DIR/c3_sncr/log/ \
+  $OUTPUT_DIR/c3_sncr/tmp/ \
+  $OUTPUT_DIR/c3_sncr_fc/log/ \
+  $OUTPUT_DIR/c3_sncr_fc/tmp/
+

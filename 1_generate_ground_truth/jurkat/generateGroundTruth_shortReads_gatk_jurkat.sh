@@ -445,4 +445,11 @@ bcftools index ${OUTPUT_DIR}/${SAMPLE12}.recal_pass.vcf.gz
 tabix -p vcf ${OUTPUT_DIR}/${SAMPLE12}.recal_pass.vcf.gz
 
 
+### delete temporary files
+rm -r \
+  ${OUTPUT_DIR}/base_recalibration_bams/ \
+  ${OUTPUT_DIR}/base_recalibration_tables/ \
+  ${OUTPUT_DIR}/intermediate_gvcfs/ \
+  ${OUTPUT_DIR}/variant_recalibration/ \
+  ${OUTPUT_DIR}/vcf_parts/
 

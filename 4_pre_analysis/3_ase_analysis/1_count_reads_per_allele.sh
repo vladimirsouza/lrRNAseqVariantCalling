@@ -139,7 +139,7 @@ rm ${SITES_VCF%.vcf.gz}_snps.recode.vcf
 
 
 ### read counts per allele
-mkdir ${OUTPUT_TABLE_DIR}
+mkdir -p ${OUTPUT_TABLE_DIR}/temp_tables
 
 for i in `seq -f '%04g' 0 $loop_num`
 do
@@ -147,7 +147,7 @@ do
     -R ${REF_FASTA} \
     -I ${OUT_PREFIX}Aligned.sortedByCoord.out_primary_readGroupAddedSameOrder.bam \
     -V ${sites_vc_snp} \
-    -O ${OUTPUT_TABLE_DIR}/ase_read_count_$i.table \
+    -O ${OUTPUT_TABLE_DIR}/temp_tables/ase_read_count_$i.table \
     -L $SCATTERED_INTERVAL_LIST/$i-scattered.interval_list &
 done
 wait
@@ -155,7 +155,7 @@ wait
 
 
 ### concatenate the table files to a single table file
-table_files=(`ls ${OUTPUT_TABLE_DIR}/ase_read_count_0*.table`)
+table_files=(`ls ${OUTPUT_TABLE_DIR}/temp_tables/ase_read_count_0*.table`)
 
 cat ${table_files[0]} > ${OUTPUT_TABLE_DIR}/ase_read_count_all.table
 
@@ -165,4 +165,8 @@ do
 done
 wait
 
+
+
+### delete temporary files
+rm -r ${OUTPUT_TABLE_DIR}/temp_tables/
 
