@@ -28,7 +28,7 @@ library(snakecase)
 # METHOD_NAMES <- c("dv_s_fc", "c3_mix", "gatk_s")
 METHOD_VCF_FILES <- c(
   "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/deepvariant/dv_sncr_fc/deepvariant_calls_pass.vcf.gz",
-  "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/clair3/mix/pileup_pass_mix_nodup.recode.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/clair3/mix/pileup_pass_mix_norep.recode.vcf.gz",
   "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/gatk/isoSeq_wtc11.recal_pass.vcf.gz"
 )
 TRUTH_NAME <- "allen"

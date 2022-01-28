@@ -50,6 +50,7 @@ REF=/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr
 INPUT_BAM_DIR=/home/vbarbo/project_2021/paper_analysis/wtc11/data_manipulation
 OUTPUT_DIR=/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/clair3
 THREADS=20
+PATH_TO_REPO=/home/vbarbo/project_2021/projects/lrRNAseqVariantCalling
 
 
 
@@ -142,19 +143,10 @@ bcftools concat \
   -o $OUTPUT_DIR/mix/pileup_pass_mix.recode.vcf.gz \
   -O z -D -a
 
-# to remove one of the (different) variants with same positions
-Rscript -e "{
-  library(vcfR)
-  vcf <- read.vcfR('$OUTPUT_DIR/mix/pileup_pass_mix.recode.vcf.gz')
-  pos <- paste(vcf@fix[,1], vcf@fix[,2])
-  k <- duplicated(pos)
-  vcf_nodup <- vcf[!k]
-  write.vcf(vcf_nodup, file='$OUTPUT_DIR/mix/pileup_pass_mix_nodup.recode.vcf.gz')
-}"
-
-# for some reason, bcftools can't read vcf files produced by vcfR::write.vcf
-# decompressing and compressing it again can solve the problem!!
-gunzip $OUTPUT_DIR/mix/pileup_pass_mix_nodup.recode.vcf.gz
-bgzip $OUTPUT_DIR/mix/pileup_pass_mix_nodup.recode.vcf
+# in case the concatenate vcf ends up with two different variants at a same site,
+# keeping the one that shows the highest QUAL value.
+Rscript $PATH_TO_REPO/removeRepeatedLowerQualSites.r \
+  $OUTPUT_DIR/mix/pileup_pass_mix.recode.vcf.gz \
+  $OUTPUT_DIR/mix/pileup_pass_mix_norep.recode.vcf.gz
 
 

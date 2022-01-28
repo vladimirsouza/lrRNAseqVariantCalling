@@ -52,7 +52,7 @@ METHOD_VCF_FILES <- c(
   "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/clair3/c3/pileup_pass.vcf.gz",
   "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/clair3/c3_sncr/pileup_pass.vcf.gz",
   "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/clair3/c3_sncr_fc/pileup_pass.vcf.gz",
-  "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/clair3/mix/pileup_pass_mix_nodup.recode.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/clair3/mix/pileup_pass_mix_norep.recode.vcf.gz",
   "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/gatk/isoSeq_jurkat.recal_pass.vcf.gz",
   "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/nanocaller/nc_sncr/variant_calls.final.vcf.gz"
 )
