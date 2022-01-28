@@ -14,9 +14,9 @@ Our pipeline required the following tools to be installed:
 * `R` (>= 4.0.5), [see installation](https://www.r-project.org/);
 * a variant caller, we recomend `DeepVariant` (>= 1.1.0), [see installation](https://github.com/google/deepvariant/blob/r1.3/docs/deepvariant-quick-start.md) &mdash; we run it with [Singularity](https://github.com/apptainer/singularity/blob/master/INSTALL.md), but other option may work,
 * or, alternatively, `Clair3` (>= v0.1-r5) [see installation](https://github.com/HKU-BAL/Clair3) &mdash; we run it with [Bioconda](https://bioconda.github.io/user/install.html), but other options may work;
-* `vcftools` (>= 0.1.16), [see installation]();
-* `bcftools` (>= 1.9), [see installation]();
-* `tabix` (>= 1.10.2), [see installation]();
+* `vcftools` (>= 0.1.16), [see installation](https://vcftools.github.io/examples.html);
+* `bcftools` (>= 1.9), [see installation](http://samtools.github.io/bcftools/), or [install bcftools with Bioconda](https://anaconda.org/bioconda/bcftools);
+* `tabix` (>= 1.10.2), [install tabix with Bioconda](https://anaconda.org/bioconda/tabix) or `sudo apt update ; sudo apt install tabix`;
 * the `R` packages:
   * Rsamtools (>= 2.4.0),
   * foreach (>= 1.5.0), and
@@ -78,7 +78,8 @@ Other variable to be defined:
 First, we align the Iso-Seq reads to the genome, and sort and index the alignments.
 
 ```
-### align reads to the genome of reference and remove secondary and supplementary alignments (keep duplicates)
+### align reads to the genome of reference and remove secondary and
+### supplementary alignments; keep duplicates
 minimap2 -ax splice \
   -uf -C5 \
   -t ${THREADS} \
@@ -146,6 +147,7 @@ singularity exec --bind ${OUTPUT_DIR}/deepvariant,/usr/lib/locale/ \
   --num_shards ${THREADS}
 ```
 
+`${OUTPUT_DIR}/deepvariant_calls.vcf` contains the called varaints.
 
 ### Alternative for variant calling from Iso-Seq with Clair3
 
@@ -160,7 +162,7 @@ Indel calling:
 ```
 mkdir -p ${OUTPUT_DIR}/clair3/indel
 
-### Clair3
+### run Clair3
 ${CLAIR3_DIR}/run_clair3.sh \
   --bam_fn=${OUTPUT_DIR}/aln_sncr_fc.bam \
   --ref_fn=${REF_FASTA} \
@@ -170,7 +172,9 @@ ${CLAIR3_DIR}/run_clair3.sh \
   --output=${OUTPUT_DIR}/clair3/indel
 
 ### take only indels
-vcftools --gzvcf ${OUTPUT_DIR}/clair3/indel/merge_output.vcf.gz \
+### we use pileup.vcf.gz instead of merge_output.vcf.gz, since the 
+### full-alignment model does not work with Iso-Seq data
+vcftools --gzvcf ${OUTPUT_DIR}/clair3/indel/pileup.vcf.gz \
   --out ${OUTPUT_DIR}/clair3/clair3_indel \
   --keep-only-indels --recode --recode-INFO-all
 bgzip ${OUTPUT_DIR}/clair3/clair3_indel.recode.vcf
@@ -190,8 +194,8 @@ ${CLAIR3_DIR}/run_clair3.sh \
   --model_path=${MODEL} \
   --output=${OUTPUT_DIR}/clair3/snp
 
-# take only SNPs
-vcftools --gzvcf ${OUTPUT_DIR}/clair3/snp/merge_output.vcf.gz \
+### take only SNPs
+vcftools --gzvcf ${OUTPUT_DIR}/clair3/snp/pileup.vcf.gz \
   --out ${OUTPUT_DIR}/clair3/clair3_snp \
   --remove-indels --recode --recode-INFO-all
 bgzip ${OUTPUT_DIR}/clair3/clair3_snp.recode.vcf
@@ -208,13 +212,12 @@ bcftools concat \
   -O z -D -a
 ```
 
+The concatenated VCF may contain two different variants at a same site. Using our function available in this repository, keep only one variant per site by removing the one with the lowest QUAL value.
 
+```
+Rscript ${PATH_TO_REPO}/removeRepeatedLowerQualSites.r \
+  $OUTPUT_DIR/mix/pileup_pass_mix.recode.vcf.gz \
+  $OUTPUT_DIR/mix/pileup_pass_mix_norep.recode.vcf.gz
+```
 
-[//]: #################### we use vcftools ----- need to install it  
-[//]: #################### bcftools  
-[//]: #################### tabix  
-
-[//]: #################### change iso-seq to lrRNA-seq (and define it)  
-
-
-[//]: ########## merge_output.vcf.gz  
+`$OUTPUT_DIR/mix/pileup_pass_mix_norep.recode.vcf.gz` is the final VCF file.
