@@ -30,7 +30,7 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
 BiocManager::install(c("foreach", "doParallel", "Rsamtools"))
 ```
 
-## Installing and running flagCorrection
+## How to installing and run flagCorrection
 
 To install `flagCorrection`, simply clone this repository with the command
 
@@ -56,7 +56,7 @@ where the variables
 * `THREADS`, is the number of threads to use.
 
 
-## Calling genetic variants from Iso-Seq data
+## How to call genetic variants from Iso-Seq data using our pipeline
 
 To call variants from Iso-Seq data using our pipeline, the input files are:
 * `INPUT_ISOSEQ_FASTQ`, path to a FASTQ file with CCS (HiFi) reads, the Iso-Seq data from which variants will called;
@@ -151,7 +151,7 @@ singularity exec --bind ${OUTPUT_DIR}/deepvariant,/usr/lib/locale/ \
 
 ### Alternative for variant calling from Iso-Seq with Clair3
 
-To call variants from Iso-Seq with `Clair3`, we recommend using our pipeline only to call indels, and `Clair3` normally for SNPs, a pipeline that we call **Clair3-mix*** in the manuscript. 
+To call variants from Iso-Seq with `Clair3`, we recommend using our pipeline only to call indels, and `Clair3` normally for SNPs, a pipeline that we call **Clair3-mix** in the manuscript. 
 
 We define the following variables as:
 * `CLAIR3_DIR`, the path to where Clair3 is installed;
@@ -177,6 +177,8 @@ ${CLAIR3_DIR}/run_clair3.sh \
 vcftools --gzvcf ${OUTPUT_DIR}/clair3/indel/pileup.vcf.gz \
   --out ${OUTPUT_DIR}/clair3/clair3_indel \
   --keep-only-indels --recode --recode-INFO-all
+
+### compress and index
 bgzip ${OUTPUT_DIR}/clair3/clair3_indel.recode.vcf
 tabix -p vcf ${OUTPUT_DIR}/clair3/clair3_indel.recode.vcf.gz
 ```
@@ -198,6 +200,8 @@ ${CLAIR3_DIR}/run_clair3.sh \
 vcftools --gzvcf ${OUTPUT_DIR}/clair3/snp/pileup.vcf.gz \
   --out ${OUTPUT_DIR}/clair3/clair3_snp \
   --remove-indels --recode --recode-INFO-all
+
+### compress and index 
 bgzip ${OUTPUT_DIR}/clair3/clair3_snp.recode.vcf
 tabix -p vcf ${OUTPUT_DIR}/clair3/clair3_snp.recode.vcf.gz
 ```
