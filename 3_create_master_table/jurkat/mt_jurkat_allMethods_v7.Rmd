@@ -57,7 +57,7 @@ METHOD_VCF_FILES <- c(
   "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/nanocaller/nc_sncr/variant_calls.final.vcf.gz"
 )
 # BAM of the data
-METHOD_BAM_FILE <- "/home/vbarbo/project_2021/paper_analysis/jurkat/data_manipulation/aln.bam"
+METHOD_BAM_FILE <- "/home/vbarbo/project_2021/paper_analysis/jurkat/data_manipulation/aln_s.bam"
 
 
 ### ground-truth

@@ -23,7 +23,7 @@ PATH_TO_REPO=/home/vbarbo/project_2021/projects/lrRNAseqVariantCalling
 ### Clair3 (alone)
 # call variants
 /home/vbarbo/programs/Clair3/run_clair3.sh \
-  --bam_fn=$INPUT_BAM_DIR/aln.bam \
+  --bam_fn=$INPUT_BAM_DIR/aln_s.bam \
   --ref_fn=$REF \
   --threads=$THREADS \
   --platform="hifi" \

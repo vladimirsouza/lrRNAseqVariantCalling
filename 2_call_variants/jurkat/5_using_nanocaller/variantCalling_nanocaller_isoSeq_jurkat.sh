@@ -5,16 +5,6 @@ THREADS=50
 
 
 
-# ### NanoCaller (alone)
-# singularity exec -e --pwd /app \
-#   /home/vbarbo/programs/NanoCaller/nanocaller-1.0.1.simg \
-#   python NanoCaller.py \
-#   -bam $INPUT_BAM_DIR/aln.bam \
-#   -p ccs \
-#   -o $OUTPUT_DIR/nc \
-#   -ref $REF \
-#   -cpu $THREADS
-
 
 conda deactivate
 conda activate NanoCaller
@@ -22,7 +12,7 @@ conda activate NanoCaller
 
 ### NanoCaller (alone)
 python /home/vbarbo/programs/NanoCaller/scripts/NanoCaller_WGS.py \
-  -bam $INPUT_BAM_DIR/aln.bam \
+  -bam $INPUT_BAM_DIR/aln_s.bam \
   -ref $REF \
   -o $OUTPUT_DIR/nc \
   -cpu $THREADS \

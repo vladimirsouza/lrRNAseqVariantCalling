@@ -35,10 +35,12 @@ samtools sort \
   -@ $THREADS \
   -o $OUTPUT_DIR/aln.bam \
   $OUTPUT_DIR/aln.bam
+mv $OUTPUT_DIR/aln.bam \
+  $OUTPUT_DIR/aln_s.bam \
 
 samtools index \
   -@ $THREADS \
-  $OUTPUT_DIR/aln.bam
+  $OUTPUT_DIR/aln_s.bam
 
 
 
@@ -49,14 +51,14 @@ samtools index \
 ### "Mapping quality (0-255 with 255 for missing)"
 gatk --java-options "-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=$THREADS" SplitNCigarReads \
   -R $REF \
-  -I $OUTPUT_DIR/aln.bam \
+  -I $OUTPUT_DIR/aln_s.bam \
   -O $OUTPUT_DIR/aln_sncr.bam
 
 
 
 ### flagCorrection
 Rscript $PATH_TO_FC \
-  $OUTPUT_DIR/aln.bam \
+  $OUTPUT_DIR/aln_s.bam \
   $OUTPUT_DIR/aln_sncr.bam \
   $OUTPUT_DIR/aln_sncr_fc.bam \
   $THREADS

@@ -27,7 +27,7 @@ singularity exec --bind $OUTPUT_DIR/dv/,/usr/lib/locale/ \
   /opt/deepvariant/bin/run_deepvariant \
   --model_type PACBIO \
   --ref $REF \
-  --reads $BAM_DIR/aln.bam \
+  --reads $BAM_DIR/aln_s.bam \
   --output_vcf $OUTPUT_DIR/dv/deepvariant_calls.vcf \
   --num_shards $THREADS
 
