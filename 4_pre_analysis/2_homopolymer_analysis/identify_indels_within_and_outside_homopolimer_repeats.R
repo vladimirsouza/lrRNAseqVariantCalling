@@ -33,14 +33,13 @@ METHOD_VCF_FILES <- c(
 )
 TRUTH_NAME <- "allen"
 TRUTH_VCF_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth/3546dc62_AH77TTBBXX_DS-229105_GCCAAT_recalibrated_subsetChromosomes_pass.vcf.gz"
-MASTER_TABLE <- "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_notFiltered_v7.RData"
+MASTER_TABLE <- "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_notFiltered_v7.rds"
 REF_FASTA <- "/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta"
-HOMOPOLYMERS_IN_REF <- "/home/vbarbo/project_2021/paper_analysis/extra_files/homopolymers_GRCh38.p13_all_chr.RData"
+HOMOPOLYMERS_IN_REF <- "/home/vbarbo/project_2021/paper_analysis/extra_files/homopolymers_GRCh38.p13_all_chr.rds"
 
 
 ### get master table and filter it
-k <- load("/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_notFiltered_v7.RData")
-dat1 <- get(k)
+dat1 <- radRDS(MASTER_TABLE)
 dim(dat1)
 
 shortread_cover_quantiles <- quantile(dat1$shortRead_coverage, probs=c(.05, .95))
@@ -96,7 +95,7 @@ dim(dat1)
 
 ### get indels in homopolymers (homopolymer length equal to 1 means non homopolymer)
 ### also, filter sites by minimum iso-seq read coverage
-load(HOMOPOLYMERS_IN_REF)
+homopolymers <- readRDS(HOMOPOLYMERS_IN_REF)
 ref_fasta_seqs <- readDNAStringSet(REF_FASTA)
 names(ref_fasta_seqs) <- sub(" .+", "", names(ref_fasta_seqs))
 
@@ -243,6 +242,4 @@ dat_homopolymer <- dat_full
 
 ### save object `dat_homopolymer` to a file.
 ### this is the data used to draw the chart for the homopolymer analysis
-save(dat_homopolymer, file="/home/vbarbo/project_2021/paper_analysis/extra_files/dat_homopolymer_analysis.RData")
-
-
+saveRDS(dat_homopolymer, "/home/vbarbo/project_2021/paper_analysis/extra_files/dat_homopolymer_analysis.rds")

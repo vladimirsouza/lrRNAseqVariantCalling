@@ -151,9 +151,6 @@ dat <- add_qual_from_vcf(dat, "ncS", METHOD_VCF_FILES[9])
 method_bam <- readGAlignments(METHOD_BAM_FILE)
 splice_sites <- get_splice_sites_info(method_bam, THREADS)
 
-# save `splice_sites` to file
-save(splice_sites, file="/home/vbarbo/project_2021/paper_analysis/extra_files/splice_sites_isoseq_jurkat.RData")
-
 dat <- add_splice_site_info_to_master_table(
   dat,
   splice_sites,
@@ -169,10 +166,6 @@ Add iso-seq read coverage.
 ```{r}
 method_coverage <- coverage(METHOD_BAM_FILE)
 
-# save `method_coverage` to file
-# since this object takes a long time to be generated, next time load it instead
-save(method_coverage, file="/home/vbarbo/project_2021/paper_analysis/extra_files/method_coverage_jurkat.RData")
-
 dat <- add_read_coverage_from_bam_to_master_table(
   dat,
   method_coverage,
@@ -183,11 +176,8 @@ dat <- add_read_coverage_from_bam_to_master_table(
 Add short-read coverage (ground truth).
 
 ```{r}
+### this takes a long time to run
 truth_coverage <- coverage(TRUTH_BAM_FILE)
-
-# save `method_coverage` to file
-# since this object takes a long time to be generated, next time load it instead
-save(truth_coverage, file="/home/vbarbo/project_2021/paper_analysis/extra_files/thruth_coverage_jurkat.RData")
 
 dat <- add_read_coverage_from_bam_to_master_table(
   dat,
@@ -379,10 +369,6 @@ genome_ref <- readDNAStringSet(GENOME_REF_FILE)
 homopolymers <- homopolymerFinder(genome_ref)
 names(homopolymers) <- sub("(^chr[0-9]+|X|Y).*", "\\1", names(homopolymers))
 
-# save `homopolymers` object to a RData file
-# since this object takes a long time to be generated, next time load it instead
-save(homopolymers, file="/home/vbarbo/project_2021/paper_analysis/extra_files/homopolymers_GRCh38.p13_all_chr.RData")
-
 dat <- add_homopolymer_length_when_indels(dat, homopolymers)
 ```
 
@@ -399,9 +385,7 @@ dat_bk <- dat
 
 ```{r}
 mt_jurkat_allMethods_notFiltered <- dat
-save(mt_jurkat_allMethods_notFiltered,
-     file="/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_jurkat_allMethods_notFiltered_v7.RData",
-     compress="xz")
+saveRDS(mt_jurkat_allMethods_notFiltered, "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_jurkat_allMethods_notFiltered_v7.rds")
 ```
 
 
@@ -477,9 +461,7 @@ save filtered master table
 
 ```{r}
 mt_jurkat_allMethods_filtered <- dat1
-save(mt_jurkat_allMethods_filtered,
-     file="/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_jurkat_allMethods_filtered_v7.RData",
-     compress="xz")
+saveRDS(mt_jurkat_allMethods_filtered, "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_jurkat_allMethods_filtered_v7.rds")
 ```
 
 

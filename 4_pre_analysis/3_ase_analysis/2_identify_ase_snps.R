@@ -7,7 +7,7 @@
 
 ### inputs
 ALLELE_COUNTS_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/ase_analysis/ase_read_count_tables/ase_read_count_all.table"
-FILTERED_MASTER_TABLE <- "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_filtered_v7.RData"
+FILTERED_MASTER_TABLE <- "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_filtered_v7.rds"
 
 
 ### packages
@@ -40,8 +40,7 @@ allele_p <- subset(allele_counts,
                    select=c("chrm", "pos", "refCount", "altCount",
                             "totalCount", "otherBases", "ase_chiSquare_adj"))
 
-k <- load(FILTERED_MASTER_TABLE)
-dat <- get(k)
+dat <- readRDS(FILTERED_MASTER_TABLE)
 dat1 <- merge(dat, allele_p, by=c("chrm", "pos"), all.x=TRUE, sort=FALSE)
 
 
@@ -126,5 +125,6 @@ datf$method <- factor(datf$method, levels=k, ordered=TRUE)
 
 dat_ase <- datf
 
-save(dat_ase, file="/home/vbarbo/project_2021/paper_analysis/extra_files/dat_ase_analysis.RData")
-
+### save object `dat_ase` to a file.
+### this is the data used to draw the chart for the ASE analysis
+saveRDS(dat_ase, "/home/vbarbo/project_2021/paper_analysis/extra_files/dat_ase_analysis.rds")

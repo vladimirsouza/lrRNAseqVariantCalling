@@ -148,9 +148,6 @@ dat <- add_qual_from_vcf(dat, "ncS", METHOD_VCF_FILES[9])
 method_bam <- readGAlignments(METHOD_BAM_FILE)
 splice_sites <- get_splice_sites_info(method_bam, THREADS)
 
-# save `splice_sites` to file
-save(splice_sites, file="/home/vbarbo/project_2021/paper_analysis/extra_files/splice_sites_isoseq_wtc11.RData")
-
 dat <- add_splice_site_info_to_master_table(
   dat,
   splice_sites,
@@ -165,10 +162,6 @@ Add iso-seq read coverage.
 
 ```{r}
 method_coverage <- coverage(METHOD_BAM_FILE)
-
-# save `method_coverage` to file
-# since this object takes a long time to be generated, next time load it instead
-save(method_coverage, file="/home/vbarbo/project_2021/paper_analysis/extra_files/method_coverage_wtc11.RData")
 
 dat <- add_read_coverage_from_bam_to_master_table(
   dat,
@@ -217,10 +210,6 @@ get_coverage_of_specified_chrms(chromoso_names, "truth_coverage_1")
 
 chromoso_names <- c( paste0("chr", 13:22), "chrX", "chrY" )
 get_coverage_of_specified_chrms(chromoso_names, "truth_coverage_2")
-
-# save `truth_coverage_1` and `truth_coverage_2` objects to a RData file
-# since these objects take a long time to be generated, next time load them instead
-save(truth_coverage_1, truth_coverage_2, file="/home/vbarbo/project_2021/paper_analysis/extra_files/truth_coverage_1_2_wtc11.RData")
 
 ### add short-read coverage to master table. must do it in two steps: first the chromosomes in truth_coverage_1 and lately the ones in truth_coverage_2
 dat_1 <- filter(dat, chrm %in% names(truth_coverage_1))
@@ -425,10 +414,6 @@ genome_ref <- readDNAStringSet(GENOME_REF_FILE)
 homopolymers <- homopolymerFinder(genome_ref)
 names(homopolymers) <- sub("(^chr[0-9]+|X|Y).*", "\\1", names(homopolymers))
 
-# save `homopolymers` object to a RData file
-# since this object takes a long time to be generated, next time load it instead
-save(homopolymers, file="/home/vbarbo/project_2021/paper_analysis/extra_files/homopolymers_GRCh38.p13_all_chr.RData")
-
 dat <- add_homopolymer_length_when_indels(dat, homopolymers)
 ```
 
@@ -445,9 +430,7 @@ dat_bk <- dat
 
 ```{r}
 mt_wtc11_allMethods_notFiltered <- dat
-save(mt_wtc11_allMethods_notFiltered,
-     file="/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_notFiltered_v7.RData",
-     compress="xz")
+saveRDS(mt_wtc11_allMethods_notFiltered, "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_notFiltered_v7.rds")
 ```
 
 
@@ -522,9 +505,7 @@ save filtered master table
 
 ```{r}
 mt_wtc11_allMethods_filtered <- dat1
-save(mt_wtc11_allMethods_filtered,
-     file="/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_filtered_v7.RData",
-     compress="xz")
+saveRDS(mt_wtc11_allMethods_filtered, "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_filtered_v7.rds")
 ```
 
 

@@ -40,15 +40,15 @@ TRUTH_NAME_WTC11 <- "allen"
 OUTPUT_DIR <- "/home/vbarbo/project_2021/paper_analysis/figures_and_results"
 EXTERNAL_FIGS <- "/home/vbarbo/project_2021/paper_analysis/figures_and_results/external_figures"
 
-# load object mt_jurkat_allMethods_notFiltered
-load("/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_jurkat_allMethods_notFiltered_v7.RData")
-# load object mt_wtc11_allMethods_notFiltered
-load("/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_notFiltered_v7.RData")
+# load Jurkat not-filtered master table
+mt_jurkat_allMethods_notFiltered <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_jurkat_allMethods_notFiltered_v7.rds")
+# load WTC-11 not-filtered master table 
+mt_wtc11_allMethods_notFiltered <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_notFiltered_v7.rds")
 
-# load object mt_jurkat_allMethods_filtered
-load("/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_jurkat_allMethods_filtered_v7.RData")
-# load object mt_wtc11_allMethods_filtered
-load("/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_filtered_v7.RData")
+# load Jurkat filtered master table 
+mt_jurkat_allMethods_filtered <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_jurkat_allMethods_filtered_v7.rds")
+# load WTC-11 filtered master table 
+mt_wtc11_allMethods_filtered <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_filtered_v7.rds")
 ```
 
 
@@ -653,9 +653,6 @@ p_1f <- ggdraw() + p_1f
 
 
 # ### give some space between figures
-# save(p_1a, p_1b, p_1c, p_1d, p_1e, p_1f, file="~/keita.RData")
-# load("~/keita.RData")
-# 
 # p_1a <- p_1a + theme(plot.margin = unit(c(3,3,3,3), "lines"))
 # p_1b <- p_1b + theme(plot.margin = unit(c(3,3,3,3), "lines"))
 # p_1c <- p_1c + theme(plot.margin = unit(c(3,3,3,3), "lines"))
@@ -698,9 +695,9 @@ dev.off()
 
 ```{r}
 # load the data to make the plots
-# this load the objects: sj_proximity_snps, sj_proximity_indels
 # these objects were created in the script: lrRNAseqVariantCalling/4_pre_analysis/1_splice_junction_proximity_analysis/splice_junction_proximity.R
-load("/home/vbarbo/project_2021/paper_analysis/extra_files/splice_junction_proximity_analysis.Rdata")
+sj_proximity_snps <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/snp_splice_junction_proximity_analysis.rds")
+sj_proximity_indels <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/indel_splice_junction_proximity_analysis.rds")
 
 
 ####################
@@ -780,9 +777,8 @@ dev.off()
 
 ```{r}
 # load the data to make the plot.
-# this loads the object: dat_homopolymer
 # it was created in the script: lrRNAseqVariantCalling/4_pre_analysis/2_homopolymer_analysis/identify_indels_within_and_outside_homopolimer_repeats.R
-load("/home/vbarbo/project_2021/paper_analysis/extra_files/dat_homopolymer_analysis.RData")
+dat_homopolymer <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/dat_homopolymer_analysis.rds")
 
 
 dat_homopolymer <- lapply(dat_homopolymer, function(x){
@@ -824,9 +820,8 @@ dev.off()
 
 ```{r}
 # load the data to make the plot
-# this loads the object: dat_ase
 # it was created in the script: /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/4_pre_analysis/3_ase_analysis/2_identify_ase_snps.R
-load("/home/vbarbo/project_2021/paper_analysis/extra_files/dat_ase_analysis.RData")
+dat_ase <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/dat_ase_analysis.rds")
 
 dat_ase$method <- recode(dat_ase$method, "Clair3 mix"="Clair3-mix",
                       "SNCR+FC+DeepVariant"="SNCR+fC+DeepVariant")
