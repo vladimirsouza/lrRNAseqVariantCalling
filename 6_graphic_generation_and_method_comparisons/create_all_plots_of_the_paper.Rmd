@@ -695,7 +695,7 @@ dev.off()
 
 ```{r}
 # load the data to make the plots
-# these objects were created in the script: lrRNAseqVariantCalling/4_pre_analysis/1_splice_junction_proximity_analysis/splice_junction_proximity.R
+# these objects were created in the script: lrRNAseqVariantCalling/5_pre_analysis/1_splice_junction_proximity_analysis/splice_junction_proximity.R
 sj_proximity_snps <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/snp_splice_junction_proximity_analysis.rds")
 sj_proximity_indels <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/indel_splice_junction_proximity_analysis.rds")
 
@@ -777,7 +777,7 @@ dev.off()
 
 ```{r}
 # load the data to make the plot.
-# it was created in the script: lrRNAseqVariantCalling/4_pre_analysis/2_homopolymer_analysis/identify_indels_within_and_outside_homopolimer_repeats.R
+# it was created in the script: lrRNAseqVariantCalling/5_pre_analysis/2_homopolymer_analysis/identify_indels_within_and_outside_homopolymer_repeats.R
 dat_homopolymer <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/dat_homopolymer_analysis.rds")
 
 
@@ -820,7 +820,7 @@ dev.off()
 
 ```{r}
 # load the data to make the plot
-# it was created in the script: /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/4_pre_analysis/3_ase_analysis/2_identify_ase_snps.R
+# it was created in the script: /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/5_pre_analysis/3_ase_analysis/2_identify_ase_snps.R
 dat_ase <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/dat_ase_analysis.rds")
 
 dat_ase$method <- recode(dat_ase$method, "Clair3 mix"="Clair3-mix",

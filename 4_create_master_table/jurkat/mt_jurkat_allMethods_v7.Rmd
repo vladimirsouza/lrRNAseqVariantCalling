@@ -1,5 +1,5 @@
 ---
-title: "Create mater table for WTC-11 dataset"
+title: "Create mater table for Jurkat dataset"
 author: "Vladimir Souza"
 date: "5/12/2021"
 output: html_document
@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Introduction
 
-Create the master table for WTC-11 data.  
+Create the master table for jurkat dataset.  
 
 Compare: DeepVariant, Clair3, and NanoCaller combined with SNCR, flagCorrection or alone, and GATK with SNCR.  
 
@@ -23,8 +23,10 @@ Iso-Seq:
   * only primary alignments (secondary and supplementary alignments were filtered out);  
   * duplicates not marked/removed.  
 
-sort-read:  
-  * VCF downloaded from Allen Institute;  
+Short-read (ground truth):  
+  * VCF generated from the merge of two DNA-seq samples (SRR5349449 and SRR5349450);  
+  * only primary alignments;  
+  * duplicates marked/removed;  
   * only chromosomes chr1, chr2, ..., chr22, chrX, chrY;  
   * intronic regions removed.  
 
@@ -44,28 +46,29 @@ METHOD_NAMES <- c("dv", "dv_s", "dv_s_fc",
 METHOD_DATASET_NAME <- "isoSeq"
 # VCF files
 METHOD_VCF_FILES <- c(
-  "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/deepvariant/dv/deepvariant_calls_pass.vcf.gz",
-  "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/deepvariant/dv_sncr/deepvariant_calls_pass.vcf.gz",
-  "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/deepvariant/dv_sncr_fc/deepvariant_calls_pass.vcf.gz",
-  "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/clair3/c3/pileup_pass.vcf.gz",
-  "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/clair3/c3_sncr/pileup_pass.vcf.gz",
-  "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/clair3/c3_sncr_fc/pileup_pass.vcf.gz",
-  "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/clair3/mix/pileup_pass_mix_norep.recode.vcf.gz",
-  "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/gatk/isoSeq_wtc11.recal_pass.vcf.gz",
-  "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/nanocaller/nc_sncr/variant_calls.final.vcf.gz"
+  "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/deepvariant/dv/deepvariant_calls_pass.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/deepvariant/dv_sncr/deepvariant_calls_pass.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/deepvariant/dv_sncr_fc/deepvariant_calls_pass.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/clair3/c3/pileup_pass.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/clair3/c3_sncr/pileup_pass.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/clair3/c3_sncr_fc/pileup_pass.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/clair3/mix/pileup_pass_mix_norep.recode.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/gatk/isoSeq_jurkat.recal_pass.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/nanocaller/nc_sncr/variant_calls.final.vcf.gz"
 )
 # BAM of the data
-METHOD_BAM_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/data_manipulation/aln_s.bam"
+METHOD_BAM_FILE <- "/home/vbarbo/project_2021/paper_analysis/jurkat/data_manipulation/aln_s.bam"
+
 
 ### ground-truth
 # name
-TRUTH_NAME <- "allen"
+TRUTH_NAME <- "merged"
 # name of the dataset used to generate the ground-truth
 TRUTH_DATASET_NAME <- "shortRead"
 # VCF file
-TRUTH_VCF_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth/3546dc62_AH77TTBBXX_DS-229105_GCCAAT_recalibrated_subsetChromosomes_pass.vcf.gz"
+TRUTH_VCF_FILE <- "/home/vbarbo/project_2021/paper_analysis/jurkat/ground_truth/jurkat_merged.recal_pass.vcf.gz"
 # BAM file
-TRUTH_BAM_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth/84773251_trimmed.AH77TTBBXX_DS-229105_GCCAAT.sorted.rg.final.1.bam"
+TRUTH_BAM_FILE <- "/home/vbarbo/project_2021/paper_analysis/jurkat/ground_truth/jurkat_merged_primary.bam"
 
 
 ### variables
@@ -142,7 +145,7 @@ dat <- add_qual_from_vcf(dat, "ncS", METHOD_VCF_FILES[9])
 ```
 
 
-## get splice site positions from the BAM file and add columns about splice sites
+## Get splice site positions from the BAM file and add columns about splice sites
 
 ```{r}
 method_bam <- readGAlignments(METHOD_BAM_FILE)
@@ -173,62 +176,14 @@ dat <- add_read_coverage_from_bam_to_master_table(
 Add short-read coverage (ground truth).
 
 ```{r}
-### this takes a long time to run.
-### we need to genereate the coverage of the ground-truth bam. since it is so big to store in a single object, we
-### split it into two ones. a for loop is used to get the coverage per chromosome. The object `truth_coverage_1`
-### stores the coverage of chromosomes 1--12, and `truth_coverage_2` of 13--22 + chrX + chrY.
-### some reading on how to read bam by chromosomes: https://www.biostars.org/p/391925/
+### this takes a long time to run
+truth_coverage <- coverage(TRUTH_BAM_FILE)
 
-get_coverage_of_specified_chrms <- function(seqnames, obj_name){
-  times <- NULL
-  env[[obj_name]] <- RleList()
-  
-  for(seqname in seqnames){
-    TIME <- Sys.time()
-    
-    i <- which(seqnames == seqname)
-    
-    end_range <- seqlengths( bamInfo[seqname] )
-    param <- ScanBamParam(what=c("pos", "qwidth"),
-                          which=GRanges(seqname, IRanges(1, end_range)),
-                          flag=scanBamFlag(isUnmappedQuery=FALSE))
-    x <- coverage( readGAlignments(TRUTH_BAM_FILE, param=param) )
-    x <- x[ names(x) == seqname ]
-    env[[obj_name]] <- c(env[[obj_name]], x)
-    
-    times[i] <- Sys.time() - TIME
-    names(times)[i] <- seqname
-    print(times)
-  }
-}
-
-bamInfo <- seqinfo(BamFile(TRUTH_BAM_FILE))
-env <- environment()
-
-chromoso_names <- paste0("chr", 1:12)
-get_coverage_of_specified_chrms(chromoso_names, "truth_coverage_1")
-
-chromoso_names <- c( paste0("chr", 13:22), "chrX", "chrY" )
-get_coverage_of_specified_chrms(chromoso_names, "truth_coverage_2")
-
-### add short-read coverage to master table. must do it in two steps: first the chromosomes in truth_coverage_1 and lately the ones in truth_coverage_2
-dat_1 <- filter(dat, chrm %in% names(truth_coverage_1))
-dat_2 <- filter(dat, chrm %in% names(truth_coverage_2))
-
-dat_1 <- add_read_coverage_from_bam_to_master_table(
-  dat_1,
-  truth_coverage_1,
+dat <- add_read_coverage_from_bam_to_master_table(
+  dat,
+  truth_coverage,
   TRUTH_DATASET_NAME
 )
-
-dat_2 <- add_read_coverage_from_bam_to_master_table(
-  dat_2,
-  truth_coverage_2,
-  TRUTH_DATASET_NAME
-)
-
-dat <- rbind(dat_1, dat_2) %>% 
-  arrange(chrm, pos)
 ```
 
 
@@ -407,12 +362,15 @@ dat[,sel_cols] [k] <- "0/0"
 ```
 
 
-## add homopolimer length (from reference FASTA), but only for 0/1 and 1/1 genotypes and indels
+## add homopolymer length (from reference FASTA), but only for 0/1 and 1/1 genotypes and indels
 
 ```{r}
+# get all homopolymers of the reference genome
 genome_ref <- readDNAStringSet(GENOME_REF_FILE)
 homopolymers <- homopolymerFinder(genome_ref)
 names(homopolymers) <- sub("(^chr[0-9]+|X|Y).*", "\\1", names(homopolymers))
+# save the homopolymers object to a file
+saveRDS("/home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/homopolymers_GRCh38.p13_all_chr.rds")
 
 dat <- add_homopolymer_length_when_indels(dat, homopolymers)
 ```
@@ -429,8 +387,8 @@ dat_bk <- dat
 ## Save master table to a file
 
 ```{r}
-mt_wtc11_allMethods_notFiltered <- dat
-saveRDS(mt_wtc11_allMethods_notFiltered, "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_notFiltered_v7.rds")
+mt_jurkat_allMethods_notFiltered <- dat
+saveRDS(mt_jurkat_allMethods_notFiltered, "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_jurkat_allMethods_notFiltered_v7.rds")
 ```
 
 
@@ -442,7 +400,7 @@ Sites to keep:
 * short-read variant density: x <= 3                          (ignore positions)  
 * ignore intronic regions (isoSeq_coverage > 0)               (ignore positions)  
 * DeepVariant QUAL: x >= 15                                   (remove method calling)  
-* short-read coverare : quantil 5% <= x <= 95%                (ignore positions)  
+* short-read coverare : 20 reads <= x <= 95%  quantil         (ignore positions)  
 
 ```{r}
 # no filtering
@@ -462,7 +420,8 @@ dat1 <- filter(dat1, isoSeq_coverage>0)
 dim(dat1)
 
 # ignore regions based on short-read coverage quantiles: keep 5% <= x <= 95%
-dat1 <- filter(dat1, shortRead_coverage >= shortread_cover_quantiles[1] &
+MIN_COVER <- 20
+dat1 <- filter(dat1, shortRead_coverage >= MIN_COVER &
                  shortRead_coverage <= shortread_cover_quantiles[2])
 dim(dat1)
 
@@ -504,8 +463,8 @@ dat1 <- add_method_vs_truth_comparison_to_master_table(
 save filtered master table
 
 ```{r}
-mt_wtc11_allMethods_filtered <- dat1
-saveRDS(mt_wtc11_allMethods_filtered, "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_filtered_v7.rds")
+mt_jurkat_allMethods_filtered <- dat1
+saveRDS(mt_jurkat_allMethods_filtered, "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_jurkat_allMethods_filtered_v7.rds")
 ```
 
 

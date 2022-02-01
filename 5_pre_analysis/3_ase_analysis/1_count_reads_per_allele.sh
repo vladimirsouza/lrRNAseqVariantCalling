@@ -28,13 +28,15 @@ S5R2=/home/vbarbo/project_2021/paper_analysis/wtc11/data/rna_short_reads/ENCSR67
 S6R1=/home/vbarbo/project_2021/paper_analysis/wtc11/data/rna_short_reads/ENCSR673UKZ/ENCFF247XJT.fastq.gz
 S6R2=/home/vbarbo/project_2021/paper_analysis/wtc11/data/rna_short_reads/ENCSR673UKZ/ENCFF785SWH.fastq.gz
 OUT_PREFIX=/home/vbarbo/project_2021/paper_analysis/wtc11/ase_analysis/star_aln/GSE175048_ENCSR673UKZ_
-
-SITES_VCF=/home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth/3546dc62_AH77TTBBXX_DS-229105_GCCAAT_recalibrated_subsetChromosomes_pass.vcf.gz
 OUTPUT_TABLE_DIR=/home/vbarbo/project_2021/paper_analysis/wtc11/ase_analysis/ase_read_count_tables
+
+# take sites in the grount truth
+SITES_VCF=/home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth/3546dc62_AH77TTBBXX_DS-229105_GCCAAT_recalibrated_subsetChromosomes_pass.vcf.gz
+
 
 
 ### to use 30 cores, intervals for the reference genome were already created in 
-### /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/1_generate_ground_truth/jurkat/generateGroundTruth_shortReads_gatk_jurkat.sh
+### /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/2_generate_ground_truth/jurkat/generateGroundTruth_shortReads_gatk_jurkat.sh
 SCATTERED_INTERVAL_LIST=/home/vbarbo/project_2021/paper_analysis/reference/genome/interval_list/ref.scattered.interval_list
 THREADS=30
 loop_num=`expr $THREADS - 1`

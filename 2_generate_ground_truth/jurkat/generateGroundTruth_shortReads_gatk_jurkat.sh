@@ -2,52 +2,24 @@
 
 
 ### this script is to generate the ground-truth vcf file (Jurkat dataset) from short-read data.
+
 ### we download illumina data from the paper in https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5941560/
+### see script /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/1_download_data/jurkat/dna_short_reads/jurkat_dna_short_reads.sh
 
 ### in this same paper they also
 ### generate the vcf file, but it's tetraploid. but they provide the code that
 ### generates the vcf, so we can get advantage of it to create our own diploid
 ### ground-truth vcf file.
 
-### good documentation in:
+### good documentation about variant calling with GATK in:
 ### A guide to GATK4 best practice pipeline performance and optimization on the IBM OpenPOWER system
 ### https://www.ibm.com/downloads/cas/ZJQD0QAL
 ### also -- paper from which I downloaded the dna short-read data to create the ground truth:
 ### https://bitbucket.org/sulab/jurkat_variant_calling/src/master/
 
+### we use two datasets to call variants with high quality. They are in fastq format, paired end:
+### datasets: jurkat_wgs_pe_100bp and jurkat_wgs_pe_150bp
 
-
-
-#################################################################################
-###### get the short-read fatsq files ###########################################
-###### there are two datasets: jurkat_wgs_pe_100bp and jurkat_wgs_pe_150bp ######
-#################################################################################
-
-
-
-### downloading the datasets (there are two differente illumina data files for jurkat cells)
-cd /home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_100bp
-wget https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos2/sra-pub-run-7/SRR5349450/SRR5349450.1
-mv SRR5349450.1 jurkat_wgs_pe_100bp
-
-cd /home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_150bp
-wget https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos2/sra-pub-run-7/SRR5349449/SRR5349449.1
-mv SRR5349449.1 jurkat_wgs_pe_150bp
-
-
-
-### Convert SRA data into fastq format
-cd /home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_100bp
-fastq-dump --split-files jurkat_wgs_pe_100bp
-cd /home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_150bp
-fastq-dump --split-files jurkat_wgs_pe_150bp
-
-### compress files
-bgzip /home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_100bp/jurkat_wgs_pe_100bp_1.fastq
-bgzip /home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_100bp/jurkat_wgs_pe_100bp_2.fastq
-
-bgzip /home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_150bp/jurkat_wgs_pe_150bp_1.fastq
-bgzip /home/vbarbo/project_2021/paper_analysis/jurkat/data/dna_short_reads/jurkat_wgs_pe_150bp/jurkat_wgs_pe_150bp_2.fastq
 
 
 
@@ -189,9 +161,9 @@ samtools index -@ $THREADS \
 
 
 
-#########################################################################################
-###### merge dna_100 and dna_150 bam files to call variants with high(er) coverage ######
-#########################################################################################
+#######################################################################################################################
+###### merge the `jurkat_wgs_pe_100bp` and `jurkat_wgs_pe_150bp` BAM files to call variants with higher coverage ######
+#######################################################################################################################
 
 
 ### inputs
