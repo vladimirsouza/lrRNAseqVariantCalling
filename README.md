@@ -5,6 +5,7 @@ This repository contains all the code used for the manuscript *Transformation of
 
 In the manuscript, we present a pipeline to increase the performance of the variant callers `DeepVariant` and `Clair3` on long-read RNA-seq (e.g., Iso-Seq data). This pipeline consists of using `minimap2` (to align reads to a reference genome), `GATK`'s `SplitNCigarReads` function (to split reads at intronic regions), `flagCorrection` (a tool developed by us to manipulate BAM files output by `SplitNCigarReads` to make them adequate for deep learning-based variant callers), and a variant caller (we suggest `DeepVariant` or `Clair3`). The generic code for this pipeline is shown below.
 
+
 ## Tools required to be installed
 
 Our pipeline required the following tools to be installed:
@@ -30,7 +31,8 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
 BiocManager::install(c("foreach", "doParallel", "Rsamtools"))
 ```
 
-## How to installing and run flagCorrection
+
+## How to installing flagCorrection and parameter description
 
 To install `flagCorrection`, simply clone this repository with the command
 
@@ -58,24 +60,19 @@ where the variables
 
 ## How to call genetic variants from Iso-Seq data using our pipeline
 
-To call variants from Iso-Seq data using our pipeline, the input files are:
-* `INPUT_ISOSEQ_FASTQ`, path to a FASTQ file with CCS (HiFi) reads, the Iso-Seq data from which variants will called;
-* `REF_FASTA`, path to a FASTA file with all chromosomes of the reference genome.
+To illustrate how to call variants from Iso-Seq data using our pipeline, we use as input a small public Iso-Seq BAM that contains full-length non-concatemer reads, which can be downloaded [here](https://downloads.pacbcloud.com/public/dataset/ISMB_workshop/isoseq3/results/alz.flnc.bam).
 
-If your input Iso-Seq data is in PacBio BAM format (`INPUT_ISOSEQ_BAM`), you may want to use `bamToFastq` to convert it to FASTQ.
+We also need a reference genome (download [here](https://downloads.pacbcloud.com/public/dataset/ISMB_workshop/hg38.fa)).
+
+Convert the Iso-Seq BAM to FASTQ format.
 
 ```
 bamToFastq \
-  -i ${INPUT_ISOSEQ_BAM} \
-  -fq ${INPUT_ISOSEQ_FASTQ}
+  -i ${ISOSEQ_BAM} \
+  -fq ${ISOSEQ_FASTQ}
 ```
 
-Other variable to be defined:
-* `OUTPUT_DIR`, path of the directory to save output files;
-* `THREADS`, number of threads to be used;
-* `PATH_TO_REPO`, path to your cloned **lrRNAseqVariantCalling** repository.
-
-First, we align the Iso-Seq reads to the genome, and sort and index the alignments.
+Align the Iso-Seq reads to the genome, and sort and index the alignments.
 
 ```
 ### align reads to the genome of reference and remove secondary and
@@ -85,7 +82,7 @@ minimap2 -ax splice \
   -t ${THREADS} \
   --secondary=no \
   ${REF_FASTA} \
-  ${INPUT_ISOSEQ_FASTQ} \
+  ${ISOSEQ_FASTQ} \
   | samtools view -bSh -F 2308 - \
   > ${OUTPUT_DIR}/aln.bam
 
@@ -104,23 +101,21 @@ samtools index \
 We use `GATK`'s `SplitNCigarReads` function to split reads at intronic regions, *i.e.*, at Ns of their CIGAR string. This removes introns from the alignments.
 
 ```
+### need to create a sequence dictionary for a reference FASTA
+gatk CreateSequenceDictionary -R ${REF_FASTA}
+
 ### SplitNCigarReads
 gatk --java-options "-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=${THREADS}" SplitNCigarReads \
   -R ${REF_FASTA} \
   -I ${OUTPUT_DIR}/aln_s.bam \
   -O ${OUTPUT_DIR}/aln_sncr.bam
-
-###  index
-samtools index \
-  -@ ${THREADS} \
-  ${OUTPUT_DIR}/aln_sncr.bam
 ```
 
 After splitting the reads, most of them receive a supplementary flag. We need to correct these flags with `flagCorrection`. 
 
 ```
 ### flagCorrection
-Rscript ${PATH_TO_REPO}/flagCorrection.r \
+ Rscript ${PATH_TO_REPO}/flagCorrection.r \
   ${OUTPUT_DIR}/aln_s.bam \
   ${OUTPUT_DIR}/aln_sncr.bam \
   ${OUTPUT_DIR}/aln_sncr_fc.bam \
@@ -143,19 +138,16 @@ singularity exec --bind ${OUTPUT_DIR}/deepvariant,/usr/lib/locale/ \
   --model_type PACBIO \
   --ref ${REF_FASTA} \
   --reads ${OUTPUT_DIR}/aln_sncr_fc.bam \
-  --output_vcf ${OUTPUT_DIR}/deepvariant_calls.vcf \
+  --output_vcf ${OUTPUT_DIR}/deepvariant/deepvariant_calls.vcf \
   --num_shards ${THREADS}
 ```
 
-`${OUTPUT_DIR}/deepvariant_calls.vcf` contains the called varaints.
+`${OUTPUT_DIR}/deepvariant/deepvariant_calls.vcf` contains the variants called by `DeepVariant`.
+
 
 ### Alternative for variant calling from Iso-Seq with Clair3
 
 To call variants from Iso-Seq with `Clair3`, we recommend using our pipeline only to call indels, and `Clair3` normally for SNPs, a pipeline that we call **Clair3-mix** in the manuscript. 
-
-We define the following variables as:
-* `CLAIR3_DIR`, the path to where Clair3 is installed;
-* `MODEL`, the path to where the proper Clair3's model is saved.
 
 Indel calling:
 
@@ -163,24 +155,26 @@ Indel calling:
 mkdir -p ${OUTPUT_DIR}/clair3/indel
 
 ### run Clair3
-${CLAIR3_DIR}/run_clair3.sh \
+conda activate clair3
+
+${PATH_TO_CLAIR3_DIR}/run_clair3.sh \
   --bam_fn=${OUTPUT_DIR}/aln_sncr_fc.bam \
   --ref_fn=${REF_FASTA} \
   --threads=${THREADS} \
   --platform="hifi" \
-  --model_path=${MODEL} \
+  --model_path=${PATH_TO_CLAIR3_HIFI_MODEL} \
   --output=${OUTPUT_DIR}/clair3/indel
 
 ### take only indels
 ### we use pileup.vcf.gz instead of merge_output.vcf.gz, since the 
 ### full-alignment model does not work with Iso-Seq data
 vcftools --gzvcf ${OUTPUT_DIR}/clair3/indel/pileup.vcf.gz \
-  --out ${OUTPUT_DIR}/clair3/clair3_indel \
+  --out ${OUTPUT_DIR}/clair3/indel/clair3_indel \
   --keep-only-indels --recode --recode-INFO-all
 
 ### compress and index
-bgzip ${OUTPUT_DIR}/clair3/clair3_indel.recode.vcf
-tabix -p vcf ${OUTPUT_DIR}/clair3/clair3_indel.recode.vcf.gz
+bgzip ${OUTPUT_DIR}/clair3/indel/clair3_indel.recode.vcf
+tabix -p vcf ${OUTPUT_DIR}/clair3/indel/clair3_indel.recode.vcf.gz
 ```
 
 SNP calling:
@@ -188,30 +182,30 @@ SNP calling:
 ```
 mkdir ${OUTPUT_DIR}/clair3/snp
 
-${CLAIR3_DIR}/run_clair3.sh \
+${PATH_TO_CLAIR3_DIR}/run_clair3.sh \
   --bam_fn=${OUTPUT_DIR}/aln_s.bam \
   --ref_fn=${REF_FASTA} \
   --threads=${THREADS} \
   --platform="hifi" \
-  --model_path=${MODEL} \
+  --model_path=${PATH_TO_CLAIR3_HIFI_MODEL} \
   --output=${OUTPUT_DIR}/clair3/snp
 
 ### take only SNPs
 vcftools --gzvcf ${OUTPUT_DIR}/clair3/snp/pileup.vcf.gz \
-  --out ${OUTPUT_DIR}/clair3/clair3_snp \
+  --out ${OUTPUT_DIR}/clair3/snp/clair3_snp \
   --remove-indels --recode --recode-INFO-all
 
 ### compress and index 
-bgzip ${OUTPUT_DIR}/clair3/clair3_snp.recode.vcf
-tabix -p vcf ${OUTPUT_DIR}/clair3/clair3_snp.recode.vcf.gz
+bgzip ${OUTPUT_DIR}/clair3/snp/clair3_snp.recode.vcf
+tabix -p vcf ${OUTPUT_DIR}/clair3/snp/clair3_snp.recode.vcf.gz
 ```
 
 Concatenate the indel and the SNP VCF files.
 
 ```
 bcftools concat \
-  ${OUTPUT_DIR}/clair3/clair3_indel.recode.vcf.gz \
-  ${OUTPUT_DIR}/clair3/clair3_snp.recode.vcf.gz \
+  ${OUTPUT_DIR}/clair3/indel/clair3_indel.recode.vcf.gz \
+  ${OUTPUT_DIR}/clair3/snp/clair3_snp.recode.vcf.gz \
   -o ${OUTPUT_DIR}/clair3/clair3_mix.recode.vcf.gz \
   -O z -D -a
 ```
@@ -220,8 +214,8 @@ The concatenated VCF may contain two different variants at a same site. Using ou
 
 ```
 Rscript ${PATH_TO_REPO}/removeRepeatedLowerQualSites.r \
-  $OUTPUT_DIR/mix/pileup_pass_mix.recode.vcf.gz \
-  $OUTPUT_DIR/mix/pileup_pass_mix_norep.recode.vcf.gz
+  ${OUTPUT_DIR}/clair3/clair3_mix.recode.vcf.gz \
+  ${OUTPUT_DIR}/clair3/clair3_mix_norep.recode.vcf.gz
 ```
 
-`$OUTPUT_DIR/mix/pileup_pass_mix_norep.recode.vcf.gz` is the final VCF file.
+`${OUTPUT_DIR}/clair3/clair3_mix_norep.recode.vcf.gz` is the final VCF file with variants called by `Clair3`.
