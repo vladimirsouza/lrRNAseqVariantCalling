@@ -60,6 +60,8 @@ where the variables
 
 ## How to call genetic variants from Iso-Seq data using our pipeline
 
+![Iso-Seq variant calling pipelien using DeepVariant](images/deep_variant_pipeline1.drawio.png)
+
 To illustrate how to call variants from Iso-Seq data using our pipeline, we use as input a small public Iso-Seq BAM that contains full-length non-concatemer reads, which can be downloaded [here](https://downloads.pacbcloud.com/public/dataset/ISMB_workshop/isoseq3/results/alz.flnc.bam).
 
 We also need a reference genome (download [here](https://downloads.pacbcloud.com/public/dataset/ISMB_workshop/hg38.fa)).
