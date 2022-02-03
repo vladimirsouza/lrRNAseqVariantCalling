@@ -13,9 +13,9 @@
 
 ### inputs
 REF=/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta
-INPUT_BAM=/home/vbarbo/project_2021/paper_analysis/wtc11/data_manipulation/aln_sncr.bam
-OUTPUT_DIR=/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/gatk
-SAMPLE=isoSeq_wtc11
+INPUT_BAM=/home/vbarbo/project_2021/paper_analysis/jurkat/data_manipulation/aln_sncr.bam
+OUTPUT_DIR=/home/vbarbo/project_2021/paper_analysis/jurkat/variant_calling_from_isoseq/gatk
+SAMPLE=isoSeq_jurkat
 THREADS=30
 
 DBSNP=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/Homo_sapiens_assembly38.known_indels.vcf.gz
@@ -26,12 +26,12 @@ MILLS=/home/vbarbo/project_2021/datasets/reference/vcf_human_ref/Mills_and_1000G
 
 
 
+
 ### to use 30 cores, intervals for the reference genome were already created in 
-### /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/1_generate_ground_truth/jurkat/generateGroundTruth_shortReads_gatk_jurkat.sh
+### /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/2_generate_ground_truth/jurkat/generateGroundTruth_shortReads_gatk_jurkat.sh
 SCATTERED_INTERVAL_LIST=/home/vbarbo/project_2021/paper_analysis/reference/genome/interval_list/ref.scattered.interval_list
 THREADS=30
 loop_num=`expr $THREADS - 1`
-
 
 
 
@@ -219,7 +219,7 @@ tabix -p vcf ${OUTPUT_DIR}/${SAMPLE}.recal_pass.vcf.gz
 
 
 
-### delte temporary files
+### delete temporary files
 rm -r \
   ${OUTPUT_DIR}/base_recalibration_bams/ \
   ${OUTPUT_DIR}/base_recalibration_tables/ \

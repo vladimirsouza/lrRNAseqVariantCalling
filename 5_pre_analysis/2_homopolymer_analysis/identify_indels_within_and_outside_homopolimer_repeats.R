@@ -35,7 +35,6 @@ TRUTH_NAME <- "allen"
 TRUTH_VCF_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth/3546dc62_AH77TTBBXX_DS-229105_GCCAAT_recalibrated_subsetChromosomes_pass.vcf.gz"
 MASTER_TABLE <- "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_notFiltered_v7.rds"
 REF_FASTA <- "/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta"
-HOMOPOLYMERS_IN_REF <- "/home/vbarbo/project_2021/paper_analysis/extra_files/homopolymers_GRCh38.p13_all_chr.rds"
 
 
 ### get master table and filter it
@@ -93,11 +92,21 @@ dim(dat1)
 
 
 
+
+# # get all homopolymers of the reference genome
+# genome_ref <- readDNAStringSet(GENOME_REF_FILE)
+# homopolymers <- homopolymerFinder(genome_ref)
+# names(homopolymers) <- sub("(^chr[0-9]+|X|Y).*", "\\1", names(homopolymers))
+### load file with all homopolymers of the reference genome created in script /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/4_create_master_table/jurkat/mt_jurkat_allMethods_v7.Rmd
+homopolymers <- readRDS("/home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/homopolymers_GRCh38.p13_all_chr.rds")
+
+
+
 ### get indels in homopolymers (homopolymer length equal to 1 means non homopolymer)
 ### also, filter sites by minimum iso-seq read coverage
-homopolymers <- readRDS(HOMOPOLYMERS_IN_REF)
 ref_fasta_seqs <- readDNAStringSet(REF_FASTA)
-names(ref_fasta_seqs) <- sub(" .+", "", names(ref_fasta_seqs))
+names(ref_fasta_seqs) <- sub("(^chr[0-9]+|X|Y).*", "\\1", names(ref_fasta_seqs))
+
 
 # dv_s_fc
 dat_hom_dvSFc <- method_homopolymer_indels(input_table=dat1,
