@@ -367,10 +367,10 @@ dat[,sel_cols] [k] <- "0/0"
 ```{r}
 # get all homopolymers of the reference genome
 genome_ref <- readDNAStringSet(GENOME_REF_FILE)
+names(genome_ref) <- sub("(^chr[0-9]+|X|Y).*", "\\1", names(genome_ref))
 homopolymers <- homopolymerFinder(genome_ref)
-names(homopolymers) <- sub("(^chr[0-9]+|X|Y).*", "\\1", names(homopolymers))
 # save the homopolymers object to a file
-saveRDS("/home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/homopolymers_GRCh38.p13_all_chr.rds")
+saveRDS(homopolymers, "/home/vbarbo/project_2021/paper_analysis/extra_files/homopolymers_GRCh38.p13_all_chr.rds")
 
 dat <- add_homopolymer_length_when_indels(dat, homopolymers)
 ```
