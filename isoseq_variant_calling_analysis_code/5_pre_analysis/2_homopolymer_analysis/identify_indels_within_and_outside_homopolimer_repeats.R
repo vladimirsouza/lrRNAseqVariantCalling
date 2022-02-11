@@ -19,9 +19,6 @@ library(lrRNAseqBenchmark)
 library(dplyr)
 library(Biostrings)
 library(snakecase)
-# library(tibble)
-# library(tidyr)
-# library(ggplot2)
 
 
 ### IMPORTANT: there are other variables defined through the script
@@ -31,82 +28,42 @@ METHOD_VCF_FILES <- c(
   "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/clair3/mix/pileup_pass_mix_norep.recode.vcf.gz",
   "/home/vbarbo/project_2021/paper_analysis/wtc11/variant_calling_from_isoseq/gatk/isoSeq_wtc11.recal_pass.vcf.gz"
 )
+METHOD_DATASET_NAME <- "isoSeq"
 TRUTH_NAME <- "allen"
 TRUTH_VCF_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth/3546dc62_AH77TTBBXX_DS-229105_GCCAAT_recalibrated_subsetChromosomes_pass.vcf.gz"
-MASTER_TABLE <- "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_notFiltered_v7.rds"
+MASTER_TABLE <- "/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_filtered_v7.rds"
 REF_FASTA <- "/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta"
 
 
-### get master table and filter it
-dat1 <- radRDS(MASTER_TABLE)
+
+### load the filtered master table and add additional filtering:
+# * filter out sites in high-variant-density regions of Iso-Seq read alignemnts;
+# * filter out sites near splice junctions.
+
+dat1 <- readRDS(MASTER_TABLE)
 dim(dat1)
 
-shortread_cover_quantiles <- quantile(dat1$shortRead_coverage, probs=c(.05, .95))
-
-# >>> variant/sequence_error density -- filter using the ground truth and iso-seq (all methods)
-k <- paste0("variantDensity_", TRUTH_NAME)
-k <- !( dat1[,k] > 3 )
-k1 <- "variantDensity_dv_dvS_dvSFc_c3_c3S_c3SFc_c3Mix_gatkS_ncS"
-k1 <- !( dat1[,k1] > 3 )
-k <- k | k1
-dat1 <- dat1[k,]
-dim(dat1)
-# <<<
-
-dat1 <- filter(dat1, isoSeq_coverage>0)
+dat1 <- filter(dat1, variantDensity_dv_dvS_dvSFc_c3_c3S_c3SFc_c3Mix_gatkS_ncS <= 3)
 dim(dat1)
 
-dat1 <- filter(dat1, shortRead_coverage >= shortread_cover_quantiles[1] &
-                 shortRead_coverage <= shortread_cover_quantiles[2])
-dim(dat1)
-
-k <- which( dat1$qual_dv < 15 )
-dat1$in_dv[k] <- 0
-dat1 <- add_method_vs_truth_comparison_to_master_table(
-  dat1,
-  "dv",
-  TRUTH_NAME,
-  replace_column=TRUE
-)
-k <- which( dat1$qual_dvS < 15 )
-dat1$in_dv_s[k] <- 0
-dat1 <- add_method_vs_truth_comparison_to_master_table(
-  dat1,
-  "dv_s",
-  TRUTH_NAME,
-  replace_column=TRUE
-)
-k <- which( dat1$qual_dvSFc < 15 )
-dat1$in_dv_s_fc[k] <- 0
-dat1 <- add_method_vs_truth_comparison_to_master_table(
-  dat1,
-  "dv_s_fc",
-  TRUTH_NAME,
-  replace_column=TRUE
-)
-
-# >>> keep only sites far from splice junction
 dat1 <- filter(dat1, is_near_ss==0)
 dim(dat1)
-# <<<
 
 
 
+### load reference genome sequences
+ref_fasta_seqs <- readDNAStringSet(REF_FASTA)
+names(ref_fasta_seqs) <- sub("(^chr[0-9]+|X|Y).*", "\\1", names(ref_fasta_seqs))
 
 # # get all homopolymers of the reference genome
-# genome_ref <- readDNAStringSet(GENOME_REF_FILE)
-# homopolymers <- homopolymerFinder(genome_ref)
-# names(homopolymers) <- sub("(^chr[0-9]+|X|Y).*", "\\1", names(homopolymers))
+# homopolymers <- homopolymerFinder(ref_fasta_seqs)
 ### load file with all homopolymers of the reference genome created in script /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/4_create_master_table/jurkat/mt_jurkat_allMethods_v7.Rmd
-homopolymers <- readRDS("/home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/homopolymers_GRCh38.p13_all_chr.rds")
+homopolymers <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/homopolymers_GRCh38.p13_all_chr.rds")
 
 
 
 ### get indels in homopolymers (homopolymer length equal to 1 means non homopolymer)
-### also, filter sites by minimum iso-seq read coverage
-ref_fasta_seqs <- readDNAStringSet(REF_FASTA)
-names(ref_fasta_seqs) <- sub("(^chr[0-9]+|X|Y).*", "\\1", names(ref_fasta_seqs))
-
+### also, filter sites by minimum iso-seq read coverage, keep only heterozygous indels
 
 # dv_s_fc
 dat_hom_dvSFc <- method_homopolymer_indels(input_table=dat1,
@@ -114,6 +71,7 @@ dat_hom_dvSFc <- method_homopolymer_indels(input_table=dat1,
                                            second_method_name="dv_s_fc",
                                            vcf_first=TRUTH_VCF_FILE,
                                            vcf_second=METHOD_VCF_FILES[1],
+                                           method_dataset_name=METHOD_DATASET_NAME,
                                            homopolymers=homopolymers,
                                            ref_fasta_seqs=ref_fasta_seqs,
                                            min_isoseq_coverage=20,
@@ -124,6 +82,7 @@ dat_hom_c3Mix <- method_homopolymer_indels(input_table=dat1,
                                            second_method_name="c3_mix",
                                            vcf_first=TRUTH_VCF_FILE,
                                            vcf_second=METHOD_VCF_FILES[2],
+                                           method_dataset_name=METHOD_DATASET_NAME,
                                            homopolymers=homopolymers,
                                            ref_fasta_seqs=ref_fasta_seqs,
                                            min_isoseq_coverage=20,
@@ -134,6 +93,7 @@ dat_hom_gatkS <- method_homopolymer_indels(input_table=dat1,
                                            second_method_name="gatk_s",
                                            vcf_first=TRUTH_VCF_FILE,
                                            vcf_second=METHOD_VCF_FILES[3],
+                                           method_dataset_name=METHOD_DATASET_NAME,
                                            homopolymers=homopolymers,
                                            ref_fasta_seqs=ref_fasta_seqs,
                                            min_isoseq_coverage=20,
@@ -151,27 +111,27 @@ dat_full <-list(class_counts=NULL, dat_text=NULL)
 
 # deletion
 k <- make_homopolymer_table_to_plot(
-  input_hom_table <- dat_hom_dvSFc,
-  variant_type <- "deletion",
-  method_name <- "dv_s_fc",
-  truth_name <- "allen",
-  hom_length_intervals <- c(1,2,3,5,11,16,21),
-  interval_names <- c("non-hp",2,"3-4","5-10", "11-15", "16-20", ">=21"),
-  to_calculate <- "pre_rec_f1",
-  output_method_name <- "SNCR+FC+DeepVariant"
+  input_hom_table = dat_hom_dvSFc,
+  variant_type = "deletion",
+  method_name = "dv_s_fc",
+  truth_name = "allen",
+  hom_length_intervals = c(1,2,3,5,11,16,21),
+  interval_names = c("non-hp",2,"3-4","5-10", "11-15", "16-20", ">=21"),
+  to_calculate = "pre_rec_f1",
+  output_method_name = "SNCR+FC+DeepVariant"
 )
 dat_full <- mapply(rbind, dat_full, k, SIMPLIFY=FALSE)
 
 # insertion
 k <- make_homopolymer_table_to_plot(
-  input_hom_table <- dat_hom_dvSFc,
-  variant_type <- "insertion",
-  method_name <- "dv_s_fc",
-  truth_name <- "allen",
-  hom_length_intervals <- c(1,2,3,5,11,16,21),
-  interval_names <- c("non-hp",2,"3-4","5-10", "11-15", "16-20", ">=21"),
-  to_calculate <- "pre_rec_f1",
-  output_method_name <- "SNCR+FC+DeepVariant"
+  input_hom_table = dat_hom_dvSFc,
+  variant_type = "insertion",
+  method_name = "dv_s_fc",
+  truth_name = "allen",
+  hom_length_intervals = c(1,2,3,5,11,16,21),
+  interval_names = c("non-hp",2,"3-4","5-10", "11-15", "16-20", ">=21"),
+  to_calculate = "pre_rec_f1",
+  output_method_name = "SNCR+FC+DeepVariant"
 )
 dat_full <- mapply(rbind, dat_full, k, SIMPLIFY=FALSE)
 
@@ -180,26 +140,26 @@ dat_full <- mapply(rbind, dat_full, k, SIMPLIFY=FALSE)
 # # # # # # # # # #
 
 k <- make_homopolymer_table_to_plot(
-  input_hom_table <- dat_hom_c3Mix,
-  variant_type <- "deletion",
-  method_name <- "c3_mix",
-  truth_name <- "allen",
-  hom_length_intervals <- c(1,2,3,5,11,16,21),
-  interval_names <- c("non-hp",2,"3-4","5-10", "11-15", "16-20", ">=21"),
-  to_calculate <- "pre_rec_f1",
-  output_method_name <- "Clair3 mix"
+  input_hom_table = dat_hom_c3Mix,
+  variant_type = "deletion",
+  method_name = "c3_mix",
+  truth_name = "allen",
+  hom_length_intervals = c(1,2,3,5,11,16,21),
+  interval_names = c("non-hp",2,"3-4","5-10", "11-15", "16-20", ">=21"),
+  to_calculate = "pre_rec_f1",
+  output_method_name = "Clair3 mix"
 )
 dat_full <- mapply(rbind, dat_full, k, SIMPLIFY=FALSE)
 
 k <- make_homopolymer_table_to_plot(
-  input_hom_table <- dat_hom_c3Mix,
-  variant_type <- "insertion",
-  method_name <- "c3_mix",
-  truth_name <- "allen",
-  hom_length_intervals <- c(1,2,3,5,11,16,21),
-  interval_names <- c("non-hp",2,"3-4","5-10", "11-15", "16-20", ">=21"),
-  to_calculate <- "pre_rec_f1",
-  output_method_name <- "Clair3 mix"
+  input_hom_table = dat_hom_c3Mix,
+  variant_type = "insertion",
+  method_name = "c3_mix",
+  truth_name = "allen",
+  hom_length_intervals = c(1,2,3,5,11,16,21),
+  interval_names = c("non-hp",2,"3-4","5-10", "11-15", "16-20", ">=21"),
+  to_calculate = "pre_rec_f1",
+  output_method_name = "Clair3 mix"
 )
 dat_full <- mapply(rbind, dat_full, k, SIMPLIFY=FALSE)
 
@@ -208,35 +168,35 @@ dat_full <- mapply(rbind, dat_full, k, SIMPLIFY=FALSE)
 # # # # # # # # #
 
 k <- make_homopolymer_table_to_plot(
-  input_hom_table <- dat_hom_gatkS,
-  variant_type <- "deletion",
-  method_name <- "gatk_s",
-  truth_name <- "allen",
-  hom_length_intervals <- c(1,2,3,5,11,16,21),
-  interval_names <- c("non-hp",2,"3-4","5-10", "11-15", "16-20", ">=21"),
-  to_calculate <- "pre_rec_f1",
-  output_method_name <- "SNCR+GATK"
+  input_hom_table = dat_hom_gatkS,
+  variant_type = "deletion",
+  method_name = "gatk_s",
+  truth_name = "allen",
+  hom_length_intervals = c(1,2,3,5,11,16,21),
+  interval_names = c("non-hp",2,"3-4","5-10", "11-15", "16-20", ">=21"),
+  to_calculate = "pre_rec_f1",
+  output_method_name = "SNCR+GATK"
 )
 dat_full <- mapply(rbind, dat_full, k, SIMPLIFY=FALSE)
 
 k <- make_homopolymer_table_to_plot(
-  input_hom_table <- dat_hom_gatkS,
-  variant_type <- "insertion",
-  method_name <- "gatk_s",
-  truth_name <- "allen",
-  hom_length_intervals <- c(1,2,3,5,11,16,21),
-  interval_names <- c("non-hp",2,"3-4","5-10", "11-15", "16-20", ">=21"),
-  to_calculate <- "pre_rec_f1",
-  output_method_name <- "SNCR+GATK"
+  input_hom_table = dat_hom_gatkS,
+  variant_type = "insertion",
+  method_name = "gatk_s",
+  truth_name = "allen",
+  hom_length_intervals = c(1,2,3,5,11,16,21),
+  interval_names = c("non-hp",2,"3-4","5-10", "11-15", "16-20", ">=21"),
+  to_calculate = "pre_rec_f1",
+  output_method_name = "SNCR+GATK"
 )
 dat_full <- mapply(rbind, dat_full, k, SIMPLIFY=FALSE)
 
 
 
 ### some manipulations
-k <- recode(levels(dat_full$class_counts$Classification),
+k <- recode(levels(dat_full$class_counts$Measures),
             "precision"="Precision", "sensitivity"="Recall", "f1Score"="F1-score")
-levels(dat_full$class_counts$Classification) <- k
+levels(dat_full$class_counts$Measures) <- k
 
 dat_full$dat_text$y <- max(dat_full$dat_text$y)
 

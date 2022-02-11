@@ -786,7 +786,7 @@ dat_homopolymer <- lapply(dat_homopolymer, function(x){
                            "insertion"="Insertion")
   x$method <- recode(x$method, "Clair3 mix"="Clair3-mix",
                      "SNCR+FC+DeepVariant"="SNCR+fC+DeepVariant")
-  x <- rename(x, "Performance measures"="Classification")
+  x <- rename(x, "Performance measures"="Measures")
   x
 })
 
