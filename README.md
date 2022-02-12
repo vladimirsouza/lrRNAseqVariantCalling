@@ -1,11 +1,11 @@
 # lrRNAseqVariantCalling
 
 
-This repository contains all the code used for the analyses in the manuscript *Transformation of alignment files improves the performance of variant callers for long-read RNA sequencing data* (DOI: XXX). The order in which the scripts were run is indicated by numbers in their names or folders.
+This repository contains all the code used for the analyses in the manuscript *Transformation of alignment files improves the performance of variant callers for long-read RNA sequencing data* ([preprint](https://www.biorxiv.org/content/10.1101/2022.02.08.479579v1)). The order in which the scripts were run is indicated by numbers in their names or folders.
 
-Here, we also make the `flagCorrection` tool available, a tool developed by us to manipulate BAM files output by `SplitNCigarReads` to make them adequate for deep learning-based variant callers.
+Here, we also make the `flagCorrection` tool available, a tool developed by us to manipulate BAM files output by GATK's `SplitNCigarReads` function to make them adequate for deep learning-based variant callers.
 
-In the manuscript, we present a pipeline to increase the performance of the variant callers `DeepVariant` and `Clair3` on long-read RNA-seq (e.g., Iso-Seq data). This pipeline consists of using `minimap2` (to align reads to a reference genome), `GATK`'s `SplitNCigarReads` function (to split reads at intronic regions), `flagCorrection`, and a variant caller (we suggest `DeepVariant` or `Clair3`). The generic code for this pipeline is shown below.
+In the manuscript, we present a pipeline to increase the performance of the variant callers `DeepVariant` and `Clair3` on long-read RNA-seq (e.g., Iso-Seq data). This pipeline consists of using `minimap2` (to align reads to a reference genome), `SplitNCigarReads` (to split reads at intronic regions), `flagCorrection`, and a variant caller (we suggest `DeepVariant` or `Clair3`). The generic code for this pipeline is shown below.
 
 
 ## Tools required to be installed
