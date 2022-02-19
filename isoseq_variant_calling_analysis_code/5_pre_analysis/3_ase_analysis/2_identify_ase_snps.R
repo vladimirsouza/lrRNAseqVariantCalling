@@ -44,9 +44,9 @@ dat <- readRDS(FILTERED_MASTER_TABLE)
 dat1 <- merge(dat, allele_p, by=c("chrm", "pos"), all.x=TRUE, sort=FALSE)
 
 
-### keep only variants that are SNPs and heterozygous, according to the 
-### ground truth, and have a p-value for ASE identification associated to 
-### them, i.e. are also SNPs and heterozygous according to the rna short reads
+### keep only variants that are SNPs and heterozygous (according to the
+### ground truth), and have a p-value for ASE identification associated to
+### them
 dat2 <- filter(dat1, variantType_allen=="snp" & gt_allen=="0/1")
 dat2 <- filter(dat2, !is.na(ase_chiSquare_adj))
 
@@ -65,7 +65,7 @@ chisq.test(k)$p.value  # 5.809803e-43
 
 
 
-### create the tables from which ggplot2 make the plot
+### create the tables from which ggplot2 makes the plots
 
 # sncr + flagcorrecion + deepvariant
 datf <- table(dat2$dv_s_fc_classification, dat2$ase_chiSquare_adj<.05)
