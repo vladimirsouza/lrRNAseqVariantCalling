@@ -416,7 +416,7 @@ dat[,sel_cols] [k] <- "0/0"
 # homopolymers <- homopolymerFinder(genome_ref)
 # names(homopolymers) <- sub("(^chr[0-9]+|X|Y).*", "\\1", names(homopolymers))
 ### load file with all homopolymers of the reference genome created in script /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/4_create_master_table/jurkat/mt_jurkat_allMethods_v7.Rmd
-homopolymers <- readRDS("/home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/homopolymers_GRCh38.p13_all_chr.rds")
+homopolymers <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/homopolymers_GRCh38.p13_all_chr.rds")
 
 dat <- add_homopolymer_length_when_indels(dat, homopolymers)
 ```
