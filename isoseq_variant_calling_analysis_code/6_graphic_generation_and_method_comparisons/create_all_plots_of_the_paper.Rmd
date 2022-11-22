@@ -33,10 +33,13 @@ library(lemon)
 library(lrRNAseqBenchmark)
 library(snakecase)
 library(viridis)
+library(tidyr)
+
 
 
 TRUTH_NAME_JURKAT <- "merged"
 TRUTH_NAME_WTC11 <- "allen"
+METHOD_DATASET_NAME <- "isoSeq"
 OUTPUT_DIR <- "/home/vbarbo/project_2021/paper_analysis/figures_and_results"
 EXTERNAL_FIGS <- "/home/vbarbo/project_2021/paper_analysis/figures_and_results/external_figures"
 
@@ -70,7 +73,7 @@ filters_to_apply <- c(
 )
 
 
-### initiate table of varaint counts (all variants)
+### initiate table of variant counts (all variants)
 in_jurkat_truth <- paste0("in_", TRUTH_NAME_JURKAT)
 dat <- dat_jurkat %>% 
   { paste(.[,1], .[,2], sep="-") } %>% 
@@ -204,84 +207,68 @@ fp <- file.path(OUTPUT_DIR, "pyramid_truth_filter.png")
 png(fp, width=570)
 p_1b
 dev.off()
-
-
-
-# ### using log scale for y axis
-# dat1 <- table(dat$filter, dat$Dataset) %>% 
-#   as.data.frame %>% 
-#   rename("filter"="Var1", "Dataset"="Var2") %>% 
-#   mutate(Freq1=ifelse(.$Dataset=="Jurkat", -.$Freq, .$Freq)) %>% 
-#   mutate(logFreq=log10(Freq)) %>% 
-#   mutate(logFreq1=ifelse(.$Dataset=="Jurkat", -.$logFreq, .$logFreq))
-# 
-# x_breaks <- seq(-5000000,5000000,1000000)
-# 
-# log_x_breaks <- c(-7:7)
-# log_x_labels <- 10^( abs(log_x_breaks) )
-# 
-# p_1b <- ggplot(dat1, aes(x=logFreq1, y=filter, fill=Dataset)) +
-#   geom_col() +
-#   # scale_x_continuous(breaks=x_breaks,labels=abs(x_breaks)) +
-#   scale_x_continuous(breaks=log_x_breaks,labels=log_x_labels) +
-#   # scale_x_continuous(trans='log2') +
-#   # scale_x_symmetric(labels = abs) +
-#   labs(x = "Population") +
-#   xlab("Variant number") +
-#   ylab("Variants to keep") +
-#   theme(text = element_text(size = 20)) +
-#   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-#   theme(legend.position="bottom") +
-#   NULL
-# 
-# fp <- file.path(OUTPUT_DIR, "pyramid_truth_filter_log.png")
-# png(fp, width=570)
-# p
-# dev.off()
 ```
 
-(Fig. 1d) compare the best pipelines
+
+(Fig. 1d) compare the best pipelines using ranges of read coverage.
 
 ```{r}
-dat_jurkat <- mt_jurkat_allMethods_filtered
-dat_wtc11 <- mt_wtc11_allMethods_filtered
-
-
 experiment_names <- c("Jurkat", "WTC-11")
-output_method_names <- c("SNCR+fC+DV", "Clair3-mix", "SNCR+GATK")
-dat <- calculate_precision_recall_for_multi_master_tables(
+method_names <- c("dv_s_fc", "c3_mix", "gatk_s")
+output_method_names <- c("SNCR+fC+DV", "Clair3-Mix", "SNCR+GATK")
+coverage_ranges <- data.frame( s=c(3, 10, 30,  80),
+                               e=c(5, 15, 40, 100) )
+
+dat_wtc11 <- mt_wtc11_allMethods_filtered
+dat_jurkat <- mt_jurkat_allMethods_filtered
+
+
+dat <- calculate_precision_recall_for_coverage_ranges(
   dat_jurkat,
   dat_wtc11,
   experiment_names = experiment_names,
-  method_names = c("dv_s_fc", "c3_mix", "gatk_s"),
+  method_names = method_names,
   output_method_names = output_method_names,
-  data_names = "isoSeq",
+  data_names = METHOD_DATASET_NAME,
   truth_names = c(TRUTH_NAME_JURKAT, TRUTH_NAME_WTC11),
-  coverage_thresholds = c(3, 15, 40, 100),
+  coverage_ranges = coverage_ranges,
   what = "snps_indels"
 )
+
 dat$variant <- recode(dat$variant, "snps"="SNPs", "indels"="Indels")
 dat$variant <- factor(dat$variant, levels=c("Indels", "SNPs"), ordered=TRUE)
 dat$method <- factor(dat$method, levels=output_method_names, ordered=TRUE)
 dat$experiment <- factor(dat$experiment, levels=experiment_names, ordered=TRUE)
 
 
+### check number of true variant sites covered by iso-seq data, separated by read coverage ranges
+ndat <- select(dat, nTrueVariants, `Coverage Ranges`, experiment, variant) %>% 
+  unique %>% 
+  spread(`Coverage Ranges`, nTrueVariants) %>% 
+  rename("Dataset"="experiment", "Type"="variant")
+ndat
+#   Dataset   Type  3--5 10--15 30--40 80--100
+# 1  Jurkat Indels 10969   2093    531     220
+# 2  Jurkat   SNPs 34352   7036   1976     830
+# 3  WTC-11 Indels  5050   1283    499     248
+# 4  WTC-11   SNPs 24998   6957   3040    1580
+
 method_cols <- hue_pal()(9)[c(1,4,7)]
 
 ### indels and spns in separated plot
 p_1d <- ggplot(dat, aes(.data$recall, .data$precision, colour=.data$method)) +
   facet_grid(experiment~variant) +
-  geom_point(aes(size=`coverage >= n`), alpha=.5) +
+  geom_point(aes(size=`Coverage Ranges`), alpha=.5) +
   geom_path(size=1.2, alpha=.5) +
   # theme(legend.position="bottom") +
   theme(legend.position="bottom", legend.box="vertical") +
   theme(legend.title=element_text(size=17), legend.text=element_text(size=14)) +
-  coord_fixed(ratio=1, xlim=c(.5, 1.03), ylim=c(.4, 1)) +
+  coord_fixed(ratio=1, xlim=c(.35, 1.03), ylim=c(.4, 1)) +
   theme(text = element_text(size = 20)) +
   xlab("Recall") +
   ylab("Precision") +
-  labs(colour="Method", size="Minimum Iso-Seq read coverage") +
-  scale_x_continuous(breaks=seq(.5, 1, .1), labels=seq(.5, 1, .1)) +
+  labs(colour="Pipelines", size="Iso-Seq read coverage ranges") +
+  scale_x_continuous(breaks=seq(.4, 1, .2), labels=seq(.4, 1, .2)) +
   scale_color_manual(values=method_cols) +
   guides(colour = guide_legend(order=1)) +
   # theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
@@ -316,8 +303,8 @@ p_1d <- p_1d +
 
 
 ### add more f1-score values
-f1 <- .5
-x <- sapply(f1, calc_precision, rec=.4) + .06
+f1 <- c(.4, .5)
+x <- sapply(f1, calc_precision, rec=.4) + c(.02, .06)
 p_1d <- p_1d +
   geom_text( aes(x, y, colour=NULL, label=label),
              data.frame(x=x, y=.4, label=f1),
@@ -325,8 +312,8 @@ p_1d <- p_1d +
   NULL
 
 
-fp <- file.path(OUTPUT_DIR, "bestPipelinesAndNcs_perCoverrage_indelSnpSepareted.png")
-png(fp,  width=520, height=600)
+fp <- file.path(OUTPUT_DIR, "bestPipelinesAndNcs_perRangeCoverrage_indelSnpSepareted.png")
+png(fp,  width=600, height=600)
 p_1d
 dev.off()
 ```
@@ -341,16 +328,21 @@ dev.off()
 dat_jurkat <- mt_jurkat_allMethods_filtered
 
 ### filter by iso-seq coverage
-dat1 <- filter(dat_jurkat, isoSeq_coverage >= 30)
+k <- paste0(METHOD_DATASET_NAME, "_coverage")
+# k <- dat_jurkat[,k] >= 30
+k <- dat_jurkat[,k] >= 20
+dat1 <- dat_jurkat[k,]
 dim(dat1)
 
 ### filter out variant that are not in the ground truth and not called by any method
-k <- select(dat1, in_dv_s_fc, in_c3_mix, in_gatk_s, all_of(in_jurkat_truth)) %>% 
+in_jurkat_truth <- paste0("in_", TRUTH_NAME_JURKAT)
+in_jurkat_methods <- paste0("in_", method_names)
+k <- select( dat1, all_of( c(in_jurkat_methods, in_jurkat_truth) ) ) %>% 
   apply(1, function(x) all(x==0))
 dat1 <- dat1[!k,]
 dim(dat1)
 
-### if the ground truth says the variant type is "homRef" or "hetAlt", remove it
+### if the variant type is NA set it to the string "NA"
 k <- grep("variantType", names(dat1))
 dat1[,k] <- lapply(dat1[,k], function(x){
   x[is.na(x)] <- "NA"
@@ -359,9 +351,9 @@ dat1[,k] <- lapply(dat1[,k], function(x){
 
 ### decide the type of the variants
 variantType_jurkat_truth <- paste0("variantType_", TRUTH_NAME_JURKAT)
-vartype_tbl <- select(dat1, variantType_dv_s_fc,
-                      variantType_c3_mix, variantType_gatk_s,
-                      all_of(variantType_jurkat_truth))
+variantType_jurkat_methods <- paste0("variantType_", method_names)
+vartype_tbl <- select( dat1, all_of( c(variantType_jurkat_methods,
+                                       variantType_jurkat_truth) ) )
 
 # first criterion: definition by the ground truth
 # second criterion: it the ground truth doens't know the variant type, consider what
@@ -379,33 +371,18 @@ typeCounts <- vartype_tbl[,k] %>%
 vartype <- rep("NA", ncol(typeCounts))
 varTypeLevels <- rownames(typeCounts)
 
-# if all (3) methods agree with one variant type, take it
-k <- apply(typeCounts, 2, function(x){
-  if(any(x==3)){
-    varTypeLevels[x==3]
-  }else{
-    NA
-  }
-})
-k1 <- !is.na(k)
-vartype[k1] <- k[k1]
+# number of methods to compare
+number_of_methods <- ncol(vartype_tbl) -1
 
-# if the mahority (2) of the methods say it's a variant type, it's okay to take it
-k <- apply(typeCounts, 2, function(x){
-  if(any(x==2)){
-    varTypeLevels[x==2]
-  }else{
-    NA
-  }
-})
-k1 <- !is.na(k)
-vartype[k1] <- k[k1]
-
-# if there is only one method that call the variant, since there is nothing better to do, take it
+# considereing only the methods that called the variant, if the majority of them says it's a variant type, take it
 na_indx <- varTypeLevels == "NA"
 k <- apply(typeCounts, 2, function(x){
-  if( x[na_indx]==2 & any(x==1) ){
-    varTypeLevels[x==1]
+  # x <- typeCounts[,1]
+  j <- (number_of_methods - x[na_indx]) / 2 + 0.01
+  x[na_indx] <- 0
+  
+  if( any(x>=j) ){
+    varTypeLevels[x>=j] [1]
   }else{
     NA
   }
@@ -413,7 +390,7 @@ k <- apply(typeCounts, 2, function(x){
 k1 <- !is.na(k)
 vartype[k1] <- k[k1]
 
-
+### if the variant is NA for the truth, use information from the methods
 k <- vartype_tbl[,variantType_jurkat_truth] == "NA"
 vartype_tbl [,variantType_jurkat_truth] [k] <- vartype[k]
 
@@ -424,48 +401,43 @@ vartype_tbl[,variantType_jurkat_truth] <- recode(
 )
 table(vartype_tbl[,variantType_jurkat_truth])
 
-
-dat1$varaint_type <- vartype_tbl[,variantType_jurkat_truth]
-dat1 <- filter( dat1, !(varaint_type %in% c("NA", "hetAlt", "homRef")) )
+dat1$variant_type <- vartype_tbl[,variantType_jurkat_truth]
+dat1 <- filter( dat1, !(variant_type %in% c("NA", "hetAlt", "homRef")) )
 dim(dat1)
-dat1 <- select(dat1, in_dv_s_fc, in_c3_mix, in_gatk_s, all_of(in_jurkat_truth), varaint_type)
-dat1$varaint_type <- recode(dat1$varaint_type, "indel"="Indels", "snp"="SNPs")
-dat1 <- rename(dat1, "SNCR+fC+DV"="in_dv_s_fc", "Clair3-mix"="in_c3_mix",
-               "SNCR+GATK"="in_gatk_s", "Ground truth"=all_of(in_jurkat_truth),
-               "Varaint Type"="varaint_type")
+dat1 <- select(dat1, all_of(in_jurkat_methods), all_of(in_jurkat_truth), variant_type)
+dat1$variant_type <- recode(dat1$variant_type, "indel"="Indels", "snp"="SNPs")
+names(dat1) <- c(output_method_names, "Ground truth", "Variant Type")
 
+
+### set order of columns
+k <- lapply( length(output_method_names):1, function(n){
+  u <- combn(output_method_names, n)
+  lapply(1:ncol(u), function(i) u[,i])
+})
+k <- unlist(k, recursive=F)
+intersection_order <- lapply(k, function(x){
+  c("Ground truth", x)
+})
+intersection_order <- c(intersection_order, "Ground truth")
+intersection_order <- c(intersection_order, k)
+
+
+k <- names(dat1) != "Variant Type"
 
 p_1e <- upset(
   dat1,
-  names(dat1)[1:4],
+  names(dat1)[k],
   # min_size=1,
   width_ratio=0.15,
   sort_intersections=FALSE,
   sort_sets=FALSE,
   base_annotations=list(
-    'Size'=intersection_size(counts=FALSE, mapping=aes(fill=`Varaint Type`))
+    'Size'=intersection_size(counts=FALSE, mapping=aes(fill=`Variant Type`))
   ),
   # intersections='all',
   set_sizes=( upset_set_size() + theme(axis.text.x=element_text(angle=90)) ),
   themes=upset_default_themes(text=element_text(size=20)),
-  intersections=list(
-    c("Ground truth", "SNCR+GATK", "Clair3-mix", "SNCR+fC+DV"),
-    c("Ground truth", "SNCR+GATK", "Clair3-mix"),
-    c("Ground truth", "SNCR+GATK", "SNCR+fC+DV"),
-    c("Ground truth", "Clair3-mix", "SNCR+fC+DV"),
-    c("Ground truth", "SNCR+GATK"),
-    c("Ground truth", "Clair3-mix"),
-    c("Ground truth", "SNCR+fC+DV"),
-    c("Ground truth"),
-    c("SNCR+GATK", "Clair3-mix", "SNCR+fC+DV"),
-    c("SNCR+GATK", "Clair3-mix"),
-    c("SNCR+GATK", "SNCR+fC+DV"),
-    c("Clair3-mix", "SNCR+fC+DV"),
-    c("SNCR+GATK"),
-    c("Clair3-mix"),
-    c("SNCR+fC+DV")
-    # c('Outside of known sets')
-  ),
+  intersections=intersection_order,
   name="",
   wrap=TRUE
 ) + 
@@ -488,16 +460,21 @@ dev.off()
 dat_wtc11 <- mt_wtc11_allMethods_filtered
 
 ### filter by iso-seq coverage
-dat1 <- filter(dat_wtc11, isoSeq_coverage >= 30)
+k <- paste0(METHOD_DATASET_NAME, "_coverage")
+# k <- dat_wtc11[,k] >= 30
+k <- dat_wtc11[,k] >= 20
+dat1 <- dat_wtc11[k,]
 dim(dat1)
 
 ### filter out variant that are not in the ground truth and not called by any method
-k <- select(dat1, in_dv_s_fc, in_c3_mix, in_gatk_s, all_of(in_wtc11_truth)) %>% 
+in_wtc11_truth <- paste0("in_", TRUTH_NAME_WTC11)
+in_wtc11_methods <- paste0("in_", method_names)
+k <- select( dat1, all_of( c(in_wtc11_methods, in_wtc11_truth) ) ) %>% 
   apply(1, function(x) all(x==0))
 dat1 <- dat1[!k,]
 dim(dat1)
 
-### if the ground truth says the variant type is "homRef" or "hetAlt", remove it
+### if the variant type is NA set it to the string "NA"
 k <- grep("variantType", names(dat1))
 dat1[,k] <- lapply(dat1[,k], function(x){
   x[is.na(x)] <- "NA"
@@ -506,9 +483,9 @@ dat1[,k] <- lapply(dat1[,k], function(x){
 
 ### decide the type of the variants
 variantType_wtc11_truth <- paste0("variantType_", TRUTH_NAME_WTC11)
-vartype_tbl <- select(dat1, variantType_dv_s_fc,
-                      variantType_c3_mix, variantType_gatk_s,
-                      all_of(variantType_wtc11_truth))
+variantType_wtc11_methods <- paste0("variantType_", method_names)
+vartype_tbl <- select( dat1, all_of( c(variantType_wtc11_methods,
+                                       variantType_wtc11_truth) ) )
 
 # first criterion: definition by the ground truth
 # second criterion: it the ground truth doens't know the variant type, consider what
@@ -526,33 +503,18 @@ typeCounts <- vartype_tbl[,k] %>%
 vartype <- rep("NA", ncol(typeCounts))
 varTypeLevels <- rownames(typeCounts)
 
-# if all (3) methods agree with one variant type, take it
-k <- apply(typeCounts, 2, function(x){
-  if(any(x==3)){
-    varTypeLevels[x==3]
-  }else{
-    NA
-  }
-})
-k1 <- !is.na(k)
-vartype[k1] <- k[k1]
+# number of methods to compare
+number_of_methods <- ncol(vartype_tbl) -1
 
-# if the mahority (2) of the methods say it's a variant type, it's okay to take it
-k <- apply(typeCounts, 2, function(x){
-  if(any(x==2)){
-    varTypeLevels[x==2]
-  }else{
-    NA
-  }
-})
-k1 <- !is.na(k)
-vartype[k1] <- k[k1]
-
-# if there is only one method that call the variant, since there is nothing better to do, take it
+# considereing only the methods that called the variant, if the majority of them says it's a variant type, take it
 na_indx <- varTypeLevels == "NA"
 k <- apply(typeCounts, 2, function(x){
-  if( x[na_indx]==2 & any(x==1) ){
-    varTypeLevels[x==1]
+  # x <- typeCounts[,1]
+  j <- (number_of_methods - x[na_indx]) / 2 + 0.01
+  x[na_indx] <- 0
+  
+  if( any(x>=j) ){
+    varTypeLevels[x>=j] [1]
   }else{
     NA
   }
@@ -560,7 +522,7 @@ k <- apply(typeCounts, 2, function(x){
 k1 <- !is.na(k)
 vartype[k1] <- k[k1]
 
-
+### if the variant is NA for the truth, use information from the methods
 k <- vartype_tbl[,variantType_wtc11_truth] == "NA"
 vartype_tbl [,variantType_wtc11_truth] [k] <- vartype[k]
 
@@ -571,48 +533,43 @@ vartype_tbl[,variantType_wtc11_truth] <- recode(
 )
 table(vartype_tbl[,variantType_wtc11_truth])
 
-
-dat1$varaint_type <- vartype_tbl[,variantType_wtc11_truth]
-dat1 <- filter( dat1, !(varaint_type %in% c("NA", "hetAlt", "homRef")) )
+dat1$variant_type <- vartype_tbl[,variantType_wtc11_truth]
+dat1 <- filter( dat1, !(variant_type %in% c("NA", "hetAlt", "homRef")) )
 dim(dat1)
-dat1 <- select(dat1, in_dv_s_fc, in_c3_mix, in_gatk_s, all_of(in_wtc11_truth), varaint_type)
-dat1$varaint_type <- recode(dat1$varaint_type, "indel"="Indels", "snp"="SNPs")
-dat1 <- rename(dat1, "SNCR+fC+DV"="in_dv_s_fc", "Clair3-mix"="in_c3_mix",
-               "SNCR+GATK"="in_gatk_s", "Ground truth"=all_of(in_wtc11_truth),
-               "Varaint Type"="varaint_type")
+dat1 <- select(dat1, all_of(in_wtc11_methods), all_of(in_wtc11_truth), variant_type)
+dat1$variant_type <- recode(dat1$variant_type, "indel"="Indels", "snp"="SNPs")
+names(dat1) <- c(output_method_names, "Ground truth", "Variant Type")
 
+
+### set order of columns
+k <- lapply( length(output_method_names):1, function(n){
+  u <- combn(output_method_names, n)
+  lapply(1:ncol(u), function(i) u[,i])
+})
+k <- unlist(k, recursive=F)
+intersection_order <- lapply(k, function(x){
+  c("Ground truth", x)
+})
+intersection_order <- c(intersection_order, "Ground truth")
+intersection_order <- c(intersection_order, k)
+
+
+k <- names(dat1) != "Variant Type"
 
 p_1f <- upset(
   dat1,
-  names(dat1)[1:4],
+  names(dat1)[k],
   # min_size=1,
   width_ratio=0.15,
   sort_intersections=FALSE,
   sort_sets=FALSE,
   base_annotations=list(
-    'Size'=intersection_size(counts=FALSE, mapping=aes(fill=`Varaint Type`))
+    'Size'=intersection_size(counts=FALSE, mapping=aes(fill=`Variant Type`))
   ),
   # intersections='all',
   set_sizes=( upset_set_size() + theme(axis.text.x=element_text(angle=90)) ),
   themes=upset_default_themes(text=element_text(size=20)),
-  intersections=list(
-    c("Ground truth", "SNCR+GATK", "Clair3-mix", "SNCR+fC+DV"),
-    c("Ground truth", "SNCR+GATK", "Clair3-mix"),
-    c("Ground truth", "SNCR+GATK", "SNCR+fC+DV"),
-    c("Ground truth", "Clair3-mix", "SNCR+fC+DV"),
-    c("Ground truth", "SNCR+GATK"),
-    c("Ground truth", "Clair3-mix"),
-    c("Ground truth", "SNCR+fC+DV"),
-    c("Ground truth"),
-    c("SNCR+GATK", "Clair3-mix", "SNCR+fC+DV"),
-    c("SNCR+GATK", "Clair3-mix"),
-    c("SNCR+GATK", "SNCR+fC+DV"),
-    c("Clair3-mix", "SNCR+fC+DV"),
-    c("SNCR+GATK"),
-    c("Clair3-mix"),
-    c("SNCR+fC+DV")
-    # c('Outside of known sets')
-  ),
+  intersections=intersection_order,
   name="",
   wrap=TRUE
 ) + 
@@ -652,36 +609,24 @@ p_1f <- draw_image(k)
 p_1f <- ggdraw() + p_1f
 
 
-# ### give some space between figures
-# p_1a <- p_1a + theme(plot.margin = unit(c(3,3,3,3), "lines"))
-# p_1b <- p_1b + theme(plot.margin = unit(c(3,3,3,3), "lines"))
-# p_1c <- p_1c + theme(plot.margin = unit(c(3,3,3,3), "lines"))
-# p_1d <- p_1d + theme(plot.margin = unit(c(3,3,3,3), "lines"))
-# p_1e <- p_1e + theme(plot.margin = unit(c(3,3,3,3), "lines"))
-# p_1f <- p_1f + theme(plot.margin = unit(c(3,3,3,3), "lines"))
-
-
+p_1b <- p_1b +
+  theme(plot.margin = unit(c(.2,.5,.2,1.3), "cm"))
 
 
 # plots together
-p_bc <- plot_grid(p_1b, NULL, p_1c,
-                  labels=c("B", "", "C"), ncol=1, rel_heights=c(1, .05, .6),
+p_1ad <- plot_grid(p_1a, NULL, p_1d,
+                  labels=c("A", "", "D"), ncol=1, rel_heights=c(1, .05, .9),
                   label_size=28)
-p_abc <- plot_grid(p_1a, NULL, p_bc,
-                   labels=c("A"), nrow=1, rel_widths=c(1, .05, .95),
-                   label_size=28)
-p_ef <- plot_grid(p_1e, p_1f, 
-                  labels=c("E", "F"), ncol=1, rel_heights=c(1,1),
-                  label_size=28)
-p_def <- plot_grid(p_1d, NULL, p_ef,
-                   labels=c("D"), nrow=1, rel_widths=c(1, .05, .95),
-                   label_size=28)
-p_1 <- plot_grid(p_abc, p_def,
-                 labels=NULL, ncol=1, rel_heights=c(1, .9),
+p_1bcef <- plot_grid(p_1b, NULL, p_1c, NULL, p_1e, NULL, p_1f,
+                    labels=c("B", "", "C", "", "E", "", "F"), ncol=1,
+                    rel_heights=c(.25, .01, .25, .01, .3, .01, .3),
+                    label_size=28)
+p_1 <- plot_grid(p_1ad, NULL, p_1bcef,
+                 labels=NULL, nrow=1, rel_widths=c(.9, .05, 1),
                  label_size=28)
 
 fp <- file.path(OUTPUT_DIR, "paper_final_figures/fig_1.png")
-png(fp, width=1000, height=1300)
+png(fp, width=1300, height=1300)
 p_1
 dev.off()
 ```
@@ -904,53 +849,74 @@ dev.off()
 # Supp. figures
 
 
-### (Fig. S2) compare DeepVariant pipelines, according minimum iso-seq read coverage
+### (Fig. S2) compare DeepVariant pipelines per iso-seq read coverage ranges
 
 ```{r}
+experiment_names <- c("Jurkat", "WTC-11")
+method_names <- c("dv", "dv_s", "dv_s_fc")
+output_method_names <- c("DeepVariant", "SNCR+DeepVariant", "SNCR+flagCorrection+DeepVariant")
+
+coverage_ranges <- data.frame( s=c(3, 10, 30,  80),
+                               e=c(5, 15, 40, 100) )
+
 dat_jurkat <- mt_jurkat_allMethods_filtered
 dat_wtc11 <- mt_wtc11_allMethods_filtered
 
 
-experiment_names <- c("Jurkat", "WTC-11")
-output_method_names <- c("DeepVariant", "SNCR+DeepVariant", "SNCR+flagCorrection+DeepVariant")
-dat <- calculate_precision_recall_for_multi_master_tables(
+dat <- calculate_precision_recall_for_coverage_ranges(
   dat_jurkat,
   dat_wtc11,
   experiment_names = experiment_names,
-  method_names = c("dv", "dv_s", "dv_s_fc"),
+  method_names = method_names,
   output_method_names = output_method_names,
-  data_names = "isoSeq",
+  data_names = METHOD_DATASET_NAME,
   truth_names = c(TRUTH_NAME_JURKAT, TRUTH_NAME_WTC11),
-  coverage_thresholds = c(3, 15, 40, 100),
+  coverage_ranges = coverage_ranges,
   what = "snps_indels"
 )
+
 dat$variant <- recode(dat$variant, "snps"="SNPs", "indels"="Indels")
 dat$variant <- factor(dat$variant, levels=c("Indels", "SNPs"), ordered=TRUE)
 dat$method <- factor(dat$method, levels=output_method_names, ordered=TRUE)
 dat$experiment <- factor(dat$experiment, levels=experiment_names, ordered=TRUE)
 
-method_cols <- hue_pal()(9)[c(6,2,1)]
 
+### check number of true variant sites covered by iso-seq data, separated by read coverage ranges
+ndat <- select(dat, nTrueVariants, `Coverage Ranges`, experiment, variant) %>% 
+  unique %>% 
+  spread(`Coverage Ranges`, nTrueVariants) %>% 
+  rename("Dataset"="experiment", "Type"="variant")
+ndat
+#   Dataset   Type  3--5 10--15 30--40 80--100
+# 1  Jurkat Indels 10969   2093    531     220
+# 2  Jurkat   SNPs 34352   7036   1976     830
+# 3  WTC-11 Indels  5050   1283    499     248
+# 4  WTC-11   SNPs 24998   6957   3040    1580
+
+method_cols <- hue_pal()(9)[c(6,2,1)]
 
 ### indels and spns in separated plot
 p_s2 <- ggplot(dat, aes(.data$recall, .data$precision, colour=.data$method)) +
   facet_grid(experiment~variant) +
-  geom_point(aes(size=`coverage >= n`), alpha=.5) +
+  geom_point(aes(size=`Coverage Ranges`), alpha=.5) +
   geom_path(size=1.2, alpha=.5) +
   # theme(legend.position="bottom") +
   theme(legend.position="bottom", legend.box="vertical") +
   theme(legend.title=element_text(size=17), legend.text=element_text(size=14)) +
-  # coord_fixed(ratio=1, xlim=c(.2, 1.03), ylim=c(.8, 1)) +
-  coord_cartesian(xlim=c(.2, 1.01), ylim=c(.78, 1)) +
+  # coord_fixed(ratio=1, xlim=c(.08, 1.03), ylim=c(.75, 1)) + 
+  coord_cartesian(xlim=c(.08, 1.01), ylim=c(.75, 1)) +
   theme(text = element_text(size = 20)) +
   xlab("Recall") +
   ylab("Precision") +
-  labs(colour="Pipelines", size="Minimum Iso-Seq read coverage") +
-  # scale_x_continuous(breaks=seq(.5, 1, .1), labels=seq(.5, 1, .1)) +
+  labs(colour="Pipelines", size="Iso-Seq read coverage ranges") +
+  scale_x_continuous(breaks=seq(.0, 1, .2), labels=seq(.0, 1, .2)) +
   scale_color_manual(values=method_cols) +
   guides(colour = guide_legend(order=1)) +
+  # theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  # expand_limits(x=c(.495, 1.005)) +
+  # geom_point( aes(x=1.01, y=.6), alpha=0) +
+  # geom_point( aes(x=.51, y=.6), alpha=0) +
   NULL
-
 
 ### add f1-score curves
 calc_precision <- function(rec, f1){
@@ -974,16 +940,17 @@ p_s2 <- p_s2 +
 
 ### add more f1-score values
 f1 <- seq(.3, .8, by=.1)
-x <- sapply(f1, calc_precision, rec=.78) + .01
+x <- sapply(f1, calc_precision, rec=.75) + .01
 p_s2 <- p_s2 +
   geom_text( aes(x, y, colour=NULL, label=label),
-             data.frame(x=x, y=.78, label=f1),
+             data.frame(x=x, y=.76, label=f1),
              show.legend=FALSE, alpha=.5, hjust=0 ) +
   NULL
 
 
+
 fp <- file.path(OUTPUT_DIR, "paper_final_figures/fig_s2.png")
-png(fp, width=900)
+png(fp, width=900, height=500)
 p_s2
 dev.off()
 ```
@@ -1232,132 +1199,69 @@ dev.off()
 ```
 
 
-### (Fig. S5) compare Clair3 pipelines, according minimum iso-seq read coverage
+
+### (Fig. S6) compare Clair3 pipelines using Pileup model, per iso-seq read coverage ranges
 
 ```{r}
+experiment_names <- c("Jurkat", "WTC-11")
+method_names <- c("c3", "c3_s", "c3_s_fc")
+output_method_names <- c("Clair3", "SNCR+Clair3", "SNCR+flagCorrection+Clair3")
+
+
+coverage_ranges <- data.frame( s=c(3, 10, 30,  80),
+                               e=c(5, 15, 40, 100) )
+
 dat_jurkat <- mt_jurkat_allMethods_filtered
 dat_wtc11 <- mt_wtc11_allMethods_filtered
 
 
-experiment_names <- c("Jurkat", "WTC-11")
-output_method_names <- c("Clair3", "SNCR+Clair3", "SNCR+flagCorrection+Clair3")
-dat <- calculate_precision_recall_for_multi_master_tables(
+dat <- calculate_precision_recall_for_coverage_ranges(
   dat_jurkat,
   dat_wtc11,
   experiment_names = experiment_names,
-  method_names = c("c3", "c3_s", "c3_s_fc"),
+  method_names = method_names,
   output_method_names = output_method_names,
-  data_names = "isoSeq",
+  data_names = METHOD_DATASET_NAME,
   truth_names = c(TRUTH_NAME_JURKAT, TRUTH_NAME_WTC11),
-  coverage_thresholds = c(3, 15, 40, 100),
+  coverage_ranges = coverage_ranges,
   what = "snps_indels"
 )
+
 dat$variant <- recode(dat$variant, "snps"="SNPs", "indels"="Indels")
 dat$variant <- factor(dat$variant, levels=c("Indels", "SNPs"), ordered=TRUE)
 dat$method <- factor(dat$method, levels=output_method_names, ordered=TRUE)
 dat$experiment <- factor(dat$experiment, levels=experiment_names, ordered=TRUE)
+
+
+### check number of true variant sites covered by iso-seq data, separated by read coverage ranges
+ndat <- select(dat, nTrueVariants, `Coverage Ranges`, experiment, variant) %>% 
+  unique %>% 
+  spread(`Coverage Ranges`, nTrueVariants) %>% 
+  rename("Dataset"="experiment", "Type"="variant")
+ndat
+#   Dataset   Type  3--5 10--15 30--40 80--100
+# 1  Jurkat Indels 10969   2093    531     220
+# 2  Jurkat   SNPs 34352   7036   1976     830
+# 3  WTC-11 Indels  5050   1283    499     248
+# 4  WTC-11   SNPs 24998   6957   3040    1580
+
 
 method_cols <- hue_pal()(9)[c(8,3,5)]
-
-
-### indels and spns in separated plot
-p_s5 <- ggplot(dat, aes(.data$recall, .data$precision, colour=.data$method)) +
-  facet_grid(experiment~variant) +
-  geom_point(aes(size=`coverage >= n`), alpha=.5) +
-  geom_path(size=1.2, alpha=.5) +
-  # theme(legend.position="bottom") +
-  theme(legend.position="bottom", legend.box="vertical") +
-  # theme(legend.title=element_text(size=17), legend.text=element_text(size=14)) +
-  coord_fixed(ratio=1, xlim=c(.4, 1.01), ylim=c(.54, .91)) +
-  # coord_cartesian(xlim=c(.4, 1.03), ylim=c(.5, 1)) +
-  theme(text = element_text(size = 20)) +
-  xlab("Recall") +
-  ylab("Precision") +
-  labs(colour="Pipelines", size="Minimum Iso-Seq read coverage") +
-  # scale_x_continuous(breaks=seq(.5, 1, .1), labels=seq(.5, 1, .1)) +
-  scale_color_manual(values=method_cols) +
-  guides(colour = guide_legend(order=1)) +
-  NULL
-
-
-### add f1-score curves
-calc_precision <- function(rec, f1){
-  res <- (f1*rec) / (2*rec - f1)
-}
-f1 <- seq(.1, .9, by=.1)
-xy_axix <- sapply(f1, calc_precision, rec=1)
-
-p_s5 <- p_s5 +
-  mapply( function(f1_i, xy_axix_i){
-    stat_function(aes(colour=NULL),
-                  fun=calc_precision, args=list(f1=f1_i), xlim=c(xy_axix_i, 1),
-                  alpha=.5, linetype=2)
-  }, f1_i=f1, xy_axix_i=xy_axix) +
-  geom_text( aes(x, y, colour=NULL, label=label),
-             data.frame(x=1.02, y=xy_axix, label=f1),
-             show.legend=FALSE, alpha=.5 ) +
-  NULL
-
-
-### add more f1-score values
-f1 <- seq(.5, .6, by=.1)
-x <- sapply(f1, calc_precision, rec=.54) + c(.01, .02)
-p_s5 <- p_s5 +
-  geom_text( aes(x, y, colour=NULL, label=label),
-             data.frame(x=x, y=.54, label=f1),
-             show.legend=FALSE, alpha=.5, hjust=0 ) +
-  NULL
-
-
-fp <- file.path(OUTPUT_DIR, "paper_final_figures/fig_s5.png")
-png(fp, width=900, height=650)
-p_s5
-dev.off()
-```
-
-
-### (Fig. S6) check SNCR+NanoCaller according to minimum iso-seq read coverage
-
-```{r}
-dat_jurkat <- mt_jurkat_allMethods_filtered
-dat_wtc11 <- mt_wtc11_allMethods_filtered
-
-
-experiment_names <- c("Jurkat", "WTC-11")
-output_method_names <- c("SNCR+NanoCaller")
-dat <- calculate_precision_recall_for_multi_master_tables(
-  dat_jurkat,
-  dat_wtc11,
-  experiment_names = experiment_names,
-  method_names = c("nc_s"),
-  output_method_names = output_method_names,
-  data_names = "isoSeq",
-  truth_names = c(TRUTH_NAME_JURKAT, TRUTH_NAME_WTC11),
-  coverage_thresholds = c(3, 15, 40, 100),
-  what = "snps_indels"
-)
-dat$variant <- recode(dat$variant, "snps"="SNPs", "indels"="Indels")
-dat$variant <- factor(dat$variant, levels=c("Indels", "SNPs"), ordered=TRUE)
-dat$method <- factor(dat$method, levels=output_method_names, ordered=TRUE)
-dat$experiment <- factor(dat$experiment, levels=experiment_names, ordered=TRUE)
-
-method_cols <- hue_pal()(9)[9]
-
 
 ### indels and spns in separated plot
 p_s6 <- ggplot(dat, aes(.data$recall, .data$precision, colour=.data$method)) +
   facet_grid(experiment~variant) +
-  geom_point(aes(size=`coverage >= n`), alpha=.5) +
+  geom_point(aes(size=`Coverage Ranges`), alpha=.5) +
   geom_path(size=1.2, alpha=.5) +
   # theme(legend.position="bottom") +
   theme(legend.position="bottom", legend.box="vertical") +
-  theme(legend.title=element_text(size=17), legend.text=element_text(size=14)) +
-  # coord_fixed(ratio=1, xlim=c(.2, 1.03), ylim=c(.8, 1)) +
-  coord_cartesian(xlim=c(.04, .51), ylim=c(.78, .92)) +
+  # theme(legend.title=element_text(size=17), legend.text=element_text(size=14)) +
+  coord_fixed(ratio=1, xlim=c(.32, 1.01), ylim=c(.46, .85)) +
+  # coord_cartesian(xlim=c(.4, 1.03), ylim=c(.5, 1)) +
   theme(text = element_text(size = 20)) +
   xlab("Recall") +
   ylab("Precision") +
-  labs(colour="Pipelines", size="Minimum Iso-Seq read coverage") +
+  labs(colour="Pipelines", size="Iso-Seq read coverage ranges") +
   # scale_x_continuous(breaks=seq(.5, 1, .1), labels=seq(.5, 1, .1)) +
   scale_color_manual(values=method_cols) +
   guides(colour = guide_legend(order=1)) +
@@ -1372,6 +1276,108 @@ f1 <- seq(.1, .9, by=.1)
 xy_axix <- sapply(f1, calc_precision, rec=1)
 
 p_s6 <- p_s6 +
+  mapply( function(f1_i, xy_axix_i){
+    stat_function(aes(colour=NULL),
+                  fun=calc_precision, args=list(f1=f1_i), xlim=c(xy_axix_i, 1),
+                  alpha=.5, linetype=2)
+  }, f1_i=f1, xy_axix_i=xy_axix) +
+  geom_text( aes(x, y, colour=NULL, label=label),
+             data.frame(x=1.02, y=xy_axix, label=f1),
+             show.legend=FALSE, alpha=.5 ) +
+  NULL
+
+
+### add more f1-score values
+f1 <- seq(.4, .6, by=.1)
+x <- sapply(f1, calc_precision, rec=.46) + c(.01, .02, .05)
+p_s6 <- p_s6 +
+  geom_text( aes(x, y, colour=NULL, label=label),
+             data.frame(x=x, y=.46, label=f1),
+             show.legend=FALSE, alpha=.5, hjust=0 ) +
+  NULL
+
+
+fp <- file.path(OUTPUT_DIR, "paper_final_figures/fig_s5.png")
+png(fp, width=900, height=650)
+p_s6
+dev.off()
+```
+
+
+### (Fig. S7) check SNCR+NanoCaller per iso-seq read coverage ranges
+
+```{r}
+experiment_names <- c("Jurkat", "WTC-11")
+method_names <- c("nc_s")
+output_method_names <- c("SNCR+NanoCaller")
+
+coverage_ranges <- data.frame( s=c(3, 10, 30,  80),
+                               e=c(5, 15, 40, 100) )
+
+dat_jurkat <- mt_jurkat_allMethods_filtered
+dat_wtc11 <- mt_wtc11_allMethods_filtered
+
+dat <- calculate_precision_recall_for_coverage_ranges(
+  dat_jurkat,
+  dat_wtc11,
+  experiment_names = experiment_names,
+  method_names = method_names,
+  output_method_names = output_method_names,
+  data_names = METHOD_DATASET_NAME,
+  truth_names = c(TRUTH_NAME_JURKAT, TRUTH_NAME_WTC11),
+  coverage_ranges = coverage_ranges,
+  what = "snps_indels"
+)
+
+dat$variant <- recode(dat$variant, "snps"="SNPs", "indels"="Indels")
+dat$variant <- factor(dat$variant, levels=c("Indels", "SNPs"), ordered=TRUE)
+dat$method <- factor(dat$method, levels=output_method_names, ordered=TRUE)
+dat$experiment <- factor(dat$experiment, levels=experiment_names, ordered=TRUE)
+
+### check number of true variant sites covered by iso-seq data, separated by read coverage ranges
+ndat <- select(dat, nTrueVariants, `Coverage Ranges`, experiment, variant) %>% 
+  unique %>% 
+  spread(`Coverage Ranges`, nTrueVariants) %>% 
+  rename("Dataset"="experiment", "Type"="variant")
+ndat
+#   Dataset   Type  3--5 10--15 30--40 80--100
+# 1  Jurkat Indels 10969   2093    531     220
+# 2  Jurkat   SNPs 34352   7036   1976     830
+# 3  WTC-11 Indels  5050   1283    499     248
+# 4  WTC-11   SNPs 24998   6957   3040    1580
+
+
+method_cols <- hue_pal()(9)[9]
+
+### indels and spns in separated plot
+p_s7 <- ggplot(dat, aes(.data$recall, .data$precision, colour=.data$method)) +
+  facet_grid(experiment~variant) +
+  geom_point(aes(size=`Coverage Ranges`), alpha=.5) +
+  geom_path(size=1.2, alpha=.5) +
+  # theme(legend.position="bottom") +
+  theme(legend.position="bottom", legend.box="vertical") +
+  theme(legend.title=element_text(size=17), legend.text=element_text(size=14)) +
+  # coord_fixed(ratio=1, xlim=c(.2, 1.03), ylim=c(.8, 1)) +
+  coord_cartesian(xlim=c(.0, .56), ylim=c(.0, .9)) +
+  theme(text = element_text(size = 20)) +
+  xlab("Recall") +
+  ylab("Precision") +
+  labs(colour="Pipelines", size="Iso-Seq read coverage ranges") +
+  scale_x_continuous(breaks=seq(0, .6, .1), labels=seq(0, .6, .1)) +
+  scale_y_continuous(breaks=seq(0, .9, .2), labels=seq(0, .9, .2)) +
+  scale_color_manual(values=method_cols) +
+  guides(colour = guide_legend(order=1)) +
+  NULL
+
+
+### add f1-score curves
+calc_precision <- function(rec, f1){
+  res <- (f1*rec) / (2*rec - f1)
+}
+f1 <- seq(.1, .9, by=.1)
+xy_axix <- sapply(f1, calc_precision, rec=1)
+
+p_s7 <- p_s7 +
   mapply( function(f1_i, xy_axix_i){
     stat_function(aes(colour=NULL),
                   fun=calc_precision, args=list(f1=f1_i), xlim=c(xy_axix_i, 1),
@@ -1386,16 +1392,16 @@ p_s6 <- p_s6 +
 ### add more f1-score values
 f1 <- seq(.1, .8, by=.1)
 x <- sapply(f1, calc_precision, rec=.78) + .01
-p_s6 <- p_s6 +
+p_s7 <- p_s7 +
   geom_text( aes(x, y, colour=NULL, label=label),
              data.frame(x=x, y=.78, label=f1),
              show.legend=FALSE, alpha=.5, hjust=0 ) +
   NULL
 
 
-fp <- file.path(OUTPUT_DIR, "paper_final_figures/fig_s6.png")
+fp <- file.path(OUTPUT_DIR, "paper_final_figures/fig_s7.png")
 png(fp, width=900, height=650)
-p_s6
+p_s7
 dev.off()
 ```
 
