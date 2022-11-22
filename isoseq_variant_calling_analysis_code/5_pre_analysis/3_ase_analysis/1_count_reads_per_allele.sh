@@ -21,13 +21,7 @@ S2R1=/home/vbarbo/project_2021/paper_analysis/wtc11/data/rna_short_reads/GSE1750
 S2R2=/home/vbarbo/project_2021/paper_analysis/wtc11/data/rna_short_reads/GSE175048/SRR14637257.1_2.fastq.gz
 S3R1=/home/vbarbo/project_2021/paper_analysis/wtc11/data/rna_short_reads/GSE175048/SRR14637258.1_1.fastq.gz
 S3R2=/home/vbarbo/project_2021/paper_analysis/wtc11/data/rna_short_reads/GSE175048/SRR14637258.1_2.fastq.gz
-S4R1=/home/vbarbo/project_2021/paper_analysis/wtc11/data/rna_short_reads/ENCSR673UKZ/ENCFF198RQU.fastq.gz
-S4R2=/home/vbarbo/project_2021/paper_analysis/wtc11/data/rna_short_reads/ENCSR673UKZ/ENCFF620HBM.fastq.gz
-S5R1=/home/vbarbo/project_2021/paper_analysis/wtc11/data/rna_short_reads/ENCSR673UKZ/ENCFF766OAK.fastq.gz
-S5R2=/home/vbarbo/project_2021/paper_analysis/wtc11/data/rna_short_reads/ENCSR673UKZ/ENCFF644AQW.fastq.gz
-S6R1=/home/vbarbo/project_2021/paper_analysis/wtc11/data/rna_short_reads/ENCSR673UKZ/ENCFF247XJT.fastq.gz
-S6R2=/home/vbarbo/project_2021/paper_analysis/wtc11/data/rna_short_reads/ENCSR673UKZ/ENCFF785SWH.fastq.gz
-OUT_PREFIX=/home/vbarbo/project_2021/paper_analysis/wtc11/ase_analysis/star_aln/GSE175048_ENCSR673UKZ_
+OUT_PREFIX=/home/vbarbo/project_2021/paper_analysis/wtc11/ase_analysis/star_aln/GSE175048_
 OUTPUT_TABLE_DIR=/home/vbarbo/project_2021/paper_analysis/wtc11/ase_analysis/ase_read_count_tables
 
 # take sites in the grount truth
@@ -62,8 +56,8 @@ ulimit -n 100000
 STAR \
   --runMode alignReads \
   --genomeDir ${REF_STAR_INDEX} \
-  --readFilesIn ${S1R1},${S2R1},${S3R1},${S4R1},${S5R1},${S6R1} \
-                ${S1R2},${S2R2},${S3R2},${S4R2},${S5R2},${S6R2} \
+  --readFilesIn ${S1R1},${S2R1},${S3R1} \
+                ${S1R2},${S2R2},${S3R2} \
   --readFilesCommand zcat \
   --outFileNamePrefix ${OUT_PREFIX} \
   --outSAMmapqUnique 60 \
