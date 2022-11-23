@@ -1,0 +1,422 @@
+---
+title: "fig_paper_09.20"
+author: "Vladimir Souza"
+date: "9/20/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+# intro
+
+Make all figures of the paper
+
+
+
+# setting up
+
+```{r}
+library(MASS)
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(ComplexUpset)
+library(cowplot)
+library(lemon)
+# library(rlang)
+library(lrRNAseqBenchmark)
+library(snakecase)
+library(viridis)
+
+
+# TRUTH_NAME_JURKAT <- "merged"
+TRUTH_NAME_WTC11 <- "allen"
+OUTPUT_DIR <- "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/short_reads/figures_and_results/gatk_deepvariantNotDv"
+
+# load WTC-11 not-filtered master table 
+mt_wtc11_allMethods_notFiltered <- readRDS("/home/vbarbo/project_2021/paper_analysis/secondary_analyses/short_reads/extra_files/master_tables/mt_wtc11_gatk_deepvariantButDv_notFiltered_v1.rds")
+
+# load WTC-11 filtered master table 
+mt_wtc11_allMethods_filtered <- readRDS("/home/vbarbo/project_2021/paper_analysis/secondary_analyses/short_reads/extra_files/master_tables/mt_wtc11_gatk_deepvariantButDv_filtered_v1.rds")
+# mt_wtc11_allMethods_filtered <- readRDS("/home/vbarbo/project_2021/paper_analysis/secondary_analyses/short_reads/extra_files/master_tables/mt_wtc11_gatk_deepvariantButDv_filtered_v2_removeGatkLongDeletions.rds")
+# mt_wtc11_allMethods_filtered <- readRDS("/home/vbarbo/project_2021/paper_analysis/secondary_analyses/short_reads/extra_files/master_tables/mt_wtc11_gatk_deepvariantButDv_filtered_v2_removeGatkLongDeletionsInsertions.rds")
+
+METHOD_DATASET_NAME <- "illumina"
+```
+
+
+
+
+# extra figure (not in the paper)
+
+get read coverage distribution of site where the gound truth shows a variant. compare iso-seq, nanopore, and illumina.
+
+```{r}
+dat_isoseq <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_filtered_v7.rds")
+dat_nanopore <- readRDS("~/project_2021/paper_analysis/secondary_analyses/nanopore/extra_files/ENCFF961HLO/clair3_gatk_deepvariant/master_tables/mt_wtc11_clair_gatk_dv_filtered_v1.rds")
+dat_illumina <- readRDS("~/project_2021/paper_analysis/secondary_analyses/short_reads/extra_files/master_tables/mt_wtc11_gatk_deepvariantButDv_filtered_v1.rds")
+
+isoseq_cover <- dat_isoseq$isoSeq_coverage[dat_isoseq$in_allen==1]
+nanopore_cover <- dat_nanopore$Nanopore_coverage[dat_nanopore$in_allen==1]
+illumina_cover <- dat_illumina$illumina_coverage[dat_illumina$in_allen==1]
+
+k_max <- max( c(isoseq_cover, nanopore_cover, illumina_cover) )
+k_levels <- 0:k_max
+isoseq_cover <- factor(isoseq_cover, levels=k_levels)
+nanopore_cover <- factor(nanopore_cover, levels=k_levels)
+illumina_cover <- factor(illumina_cover, levels=k_levels)
+
+isoseq_cover <- table(isoseq_cover)
+nanopore_cover <- table(nanopore_cover)
+illumina_cover <- table(illumina_cover)
+
+k <- c(isoseq_cover, nanopore_cover, illumina_cover)
+k1 <- rep(
+  c("isoseq", "nanopore", "illumina"),
+  c( length(isoseq_cover), length(nanopore_cover), length(illumina_cover) )
+)
+dat_cover_all <- data.frame(
+  counts = as.numeric(k),
+  coverage = factor( names(k), levels=k_levels, ordered=TRUE ),
+  sequencing = k1
+)
+
+dat_cover_all2 <- filter(dat_cover_all, as.numeric(as.vector(coverage)) <= 40)
+dat_cover_all2 <- filter(dat_cover_all2, as.numeric(as.vector(coverage)) >= 3)
+
+p <- ggplot(dat_cover_all2, aes(x=coverage, y=counts, fill=sequencing)) +
+  geom_bar(stat="identity", position=position_dodge())
+
+fp <- file.path(OUTPUT_DIR, "histogram_coverage_sequencing.png")
+png(fp,  width=1420, height=600)
+p
+dev.off()
+```
+
+
+# Fig. Illumina
+
+Compare methods per ranges of read coverage.
+
+```{r}
+experiment_names <- c("WTC-11")
+method_names <- c("dvWes_sncr", "dvWes_sncr_fc", "gatk")
+output_method_names <- c("SNCR+DeepVariantWES", "SNCR+fC+DeepVariantWES", "GATK")
+coverage_ranges <- data.frame( s=c(3, 10, 30,  80, 200, 400, 1000),
+                               e=c(5, 15, 40, 100, 250, 500, 1500) )
+
+dat_wtc11 <- mt_wtc11_allMethods_filtered
+
+dat <- calculate_precision_recall_for_coverage_ranges(
+  # dat_jurkat,
+  dat_wtc11,
+  experiment_names = experiment_names,
+  method_names = method_names,
+  output_method_names = output_method_names,
+  data_names = METHOD_DATASET_NAME,
+  # truth_names = c(TRUTH_NAME_JURKAT, TRUTH_NAME_WTC11),
+  truth_names = c(TRUTH_NAME_WTC11),
+  coverage_ranges = coverage_ranges,
+  what = "snps_indels"
+)
+
+dat$variant <- recode(dat$variant, "snps"="SNPs", "indels"="Indels")
+dat$variant <- factor(dat$variant, levels=c("Indels", "SNPs"), ordered=TRUE)
+dat$method <- factor(dat$method, levels=output_method_names, ordered=TRUE)
+dat$experiment <- factor(dat$experiment, levels=experiment_names, ordered=TRUE)
+
+
+### check number of true variant sites covered by iso-seq data, separated by read coverage ranges
+library(tidyr)
+ndat <- select(dat, nTrueVariants, `Coverage Ranges`, experiment, variant) %>% 
+  unique %>% 
+  spread(`Coverage Ranges`, nTrueVariants) %>% 
+  rename("Dataset"="experiment", "Type"="variant")
+ndat
+#   Dataset   Type  3--5 10--15 30--40 80--100 200--250 400--500 1000--1500
+# 1  WTC-11 Indels 11848   2842    842     412      280      160         97
+# 2  WTC-11   SNPs 62498  15840   5158    2538     1772     1130        779
+
+
+method_cols <- hue_pal()(9)[c(2,1,7)]
+
+### indels and spns in separated plot
+p_1d <- ggplot(dat, aes(.data$recall, .data$precision, colour=.data$method)) +
+  facet_grid(experiment~variant) +
+  geom_point(aes(size=`Coverage Ranges`), alpha=.5) +
+  geom_path(size=1.2, alpha=.5) +
+  # theme(legend.position="bottom") +
+  theme(legend.position="bottom", legend.box="vertical") +
+  theme(legend.title=element_text(size=17), legend.text=element_text(size=14)) +
+  coord_fixed(ratio=1, xlim=c(.0, 1.03), ylim=c(.0, 1)) +
+  theme(text = element_text(size = 22)) +
+  xlab("Recall") +
+  ylab("Precision") +
+  labs(colour="Method", size="Illunina short read coverage ranges") +
+  # scale_x_continuous(breaks=seq(.5, 1, .1), labels=seq(.5, 1, .1)) +
+  scale_color_manual(values=method_cols) +
+  guides(colour = guide_legend(order=1)) +
+  # theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  # expand_limits(x=c(.495, 1.005)) +
+  # geom_point( aes(x=1.01, y=.6), alpha=0) +
+  # geom_point( aes(x=.51, y=.6), alpha=0) +
+  NULL
+
+
+### add f1-score curves
+calc_precision <- function(rec, f1){
+  res <- (f1*rec) / (2*rec - f1)
+}
+f1 <- seq(.1, .9, by=.1)
+xy_axix <- sapply(f1, calc_precision, rec=1)
+
+
+p_1d <- p_1d +
+  mapply( function(f1_i, xy_axix_i){
+    stat_function(aes(colour=NULL),
+                  fun=calc_precision, args=list(f1=f1_i), xlim=c(xy_axix_i, 1),
+                  alpha=.5, linetype=2)
+  }, f1_i=f1, xy_axix_i=xy_axix) +
+  geom_text( aes(x, y, colour=NULL, label=label),
+             data.frame(x=1.03, y=xy_axix, label=f1),
+             show.legend=FALSE, alpha=.5 ) +
+  # geom_text( aes(x, y, colour=NULL, label=label),
+  #            data.frame(x=1.03, y=1, label="1.0"),
+  #            show.legend=FALSE, alpha=.5 ) +
+  # geom_point( aes(x, y, colour=NULL), data.frame(x=1, y=1), alpha=.3, size=.5) +
+  NULL
+
+
+# ### add more f1-score values
+# f1 <- .5
+# x <- sapply(f1, calc_precision, rec=.4) + .06
+# p_1d <- p_1d +
+#   geom_text( aes(x, y, colour=NULL, label=label),
+#              data.frame(x=x, y=.4, label=f1),
+#              show.legend=FALSE, alpha=.5, hjust=0 ) +
+#   NULL
+
+
+fp <- file.path(OUTPUT_DIR, "bestPipelinesAndNcs_perRangeCoverrage_indelSnpSepareted.png")
+# fp <- file.path(OUTPUT_DIR, "bestPipelinesAndNcs_perRangeCoverrage_indelSnpSepareted_noGatkLongDeletions.png")
+# fp <- file.path(OUTPUT_DIR, "bestPipelinesAndNcs_perRangeCoverrage_indelSnpSepareted_noGatkLongDeletionsInsertions.png")
+png(fp,  width=920, height=600)
+p_1d
+dev.off()
+```
+
+
+Upset plot to compare the best methods
+
+```{r}
+method_names <- c("dvWes_sncr", "dvWes_sncr_fc", "gatk")
+output_method_names <- c("SNCR+DeepVariantWES", "SNCR+fC+DeepVariantWES",
+                         "GATK")
+
+
+####################
+###### wtc11 ######
+####################
+
+dat_wtc11 <- mt_wtc11_allMethods_filtered
+
+### filter by iso-seq coverage
+k <- paste0(METHOD_DATASET_NAME, "_coverage")
+# k <- dat_wtc11[,k] >= 30
+k <- dat_wtc11[,k] >= 20
+dat1 <- dat_wtc11[k,]
+dim(dat1)
+
+### filter out variant that are not in the ground truth and not called by any method
+in_wtc11_truth <- paste0("in_", TRUTH_NAME_WTC11)
+in_wtc11_methods <- paste0("in_", method_names)
+k <- select( dat1, all_of( c(in_wtc11_methods, in_wtc11_truth) ) ) %>% 
+  apply(1, function(x) all(x==0))
+dat1 <- dat1[!k,]
+dim(dat1)
+
+### if the variant type is NA set it to the string "NA"
+k <- grep("variantType", names(dat1))
+dat1[,k] <- lapply(dat1[,k], function(x){
+  x[is.na(x)] <- "NA"
+  x
+})
+
+### decide the type of the variants
+variantType_wtc11_truth <- paste0("variantType_", TRUTH_NAME_WTC11)
+variantType_wtc11_methods <- paste0("variantType_", method_names)
+vartype_tbl <- select( dat1, all_of( c(variantType_wtc11_methods,
+                                       variantType_wtc11_truth) ) )
+
+# first criterion: definition by the ground truth
+# second criterion: if the ground truth doens't know the variant type, consider what
+# the methods say.
+truth_is_na <- vartype_tbl[,variantType_wtc11_truth] == "NA"
+varTypeLevels <- c("deletion", "hetAlt", "homRef", "insertion", "NA", "snp")
+k <- names(vartype_tbl) != variantType_wtc11_truth
+typeCounts <- vartype_tbl[,k] %>% 
+  apply(1, function(x){
+    x <- factor(x, levels=varTypeLevels)
+    x <- table(x)
+    x
+  })
+
+vartype <- rep("NA", ncol(typeCounts))
+varTypeLevels <- rownames(typeCounts)
+
+# number of methods to compare
+number_of_methods <- ncol(vartype_tbl) -1
+
+
+# # if all methods agree with one variant type, take it
+# j <- number_of_methods
+# k <- apply(typeCounts, 2, function(x){
+#   if(any(x==j)){
+#     varTypeLevels[x==j]
+#   }else{
+#     NA
+#   }
+# })
+# k1 <- !is.na(k)
+# vartype[k1] <- k[k1]
+# 
+# # if the majority (3) of the methods say it's a variant type, it's okay to take it
+# j <- (number_of_methods / 2) + 0.01
+# k <- apply(typeCounts, 2, function(x){
+#   if(any(x>=j)){
+#     varTypeLevels [x>=j] [1]
+#   }else{
+#     NA
+#   }
+# })
+# k1 <- !is.na(k)
+# vartype[k1] <- k[k1]
+# 
+# # if there is only one method that call the variant, since there is nothing better to do, take it
+# j <- number_of_methods -1
+# na_indx <- varTypeLevels == "NA"
+# k <- apply(typeCounts, 2, function(x){
+#   if( x[na_indx]==j & any(x==1) ){
+#     varTypeLevels[x==1]
+#   }else{
+#     NA
+#   }
+# })
+# k1 <- !is.na(k)
+# vartype[k1] <- k[k1]
+
+# considereing only the methods that called the variant, if the majority of them says it's a variant type, take it
+na_indx <- varTypeLevels == "NA"
+k <- apply(typeCounts, 2, function(x){
+  # x <- typeCounts[,1]
+  j <- (number_of_methods - x[na_indx]) / 2 + 0.01
+  x[na_indx] <- 0
+  
+  if( any(x>=j) ){
+    varTypeLevels[x>=j] [1]
+  }else{
+    NA
+  }
+})
+k1 <- !is.na(k)
+vartype[k1] <- k[k1]
+
+
+
+
+### if the variant is NA for the truth, use information from the methods
+k <- vartype_tbl[,variantType_wtc11_truth] == "NA"
+vartype_tbl [,variantType_wtc11_truth] [k] <- vartype[k]
+
+### don't separate by indel type
+vartype_tbl[,variantType_wtc11_truth] <- recode(
+  vartype_tbl[,variantType_wtc11_truth],
+  "deletion"="indel", "insertion"="indel"
+)
+table(vartype_tbl[,variantType_wtc11_truth])
+
+
+dat1$varaint_type <- vartype_tbl[,variantType_wtc11_truth]
+dat1 <- filter( dat1, !(varaint_type %in% c("NA", "hetAlt", "homRef")) )
+dim(dat1)
+dat1 <- select(dat1, all_of(in_wtc11_methods), all_of(in_wtc11_truth), varaint_type)
+dat1$varaint_type <- recode(dat1$varaint_type, "indel"="Indels", "snp"="SNPs")
+
+names(dat1) <- c(output_method_names, "Ground truth", "Varaint Type")
+
+
+### set order of columns
+k <- lapply( length(output_method_names):1, function(n){
+  u <- combn(output_method_names, n)
+  lapply(1:ncol(u), function(i) u[,i])
+})
+k <- unlist(k, recursive=F)
+intersection_order <- lapply(k, function(x){
+  c("Ground truth", x)
+})
+intersection_order <- c(intersection_order, "Ground truth")
+intersection_order <- c(intersection_order, k)
+
+
+k <- names(dat1) != "Varaint Type"
+
+p_1f <- upset(
+  dat1,
+  names(dat1)[k],
+  # min_size=1,
+  width_ratio=0.15,
+  sort_intersections=FALSE,
+  sort_sets=FALSE,
+  base_annotations=list(
+    'Size'=intersection_size(counts=FALSE, mapping=aes(fill=`Varaint Type`))
+  ),
+  # intersections='all',
+  set_sizes=( upset_set_size() + theme(axis.text.x=element_text(angle=90)) ),
+  themes=upset_default_themes(text=element_text(size=20)),
+  intersections=intersection_order,
+  name="",
+  wrap=TRUE
+) + 
+  # ggtitle('WTC-11') +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=30)) +
+  NULL
+
+fp <- file.path(OUTPUT_DIR, "upsetPlot_bestMethods_wtc11.png")
+# fp <- file.path(OUTPUT_DIR, "upsetPlot_bestMethods_wtc11_noGatkLongDeletions.png")
+# fp <- file.path(OUTPUT_DIR, "upsetPlot_bestMethods_wtc11_noGatkLongDeletionsInsertions.png")
+png(fp, width=800)
+p_1f
+dev.off()
+```
+
+fig all together
+
+```{r}
+# for some reason the upset objects didn't work with cowplot
+# load the upset images instead
+k <- file.path(OUTPUT_DIR, "upsetPlot_bestMethods_wtc11.png")
+p_1b <- draw_image(k)
+p_1b <- ggdraw() + p_1b
+
+
+
+# plots together
+p_ab <- plot_grid(p_1d, NULL, p_1b,
+                  labels=c("A", "", "B"), ncol=1, rel_heights=c(1, .05, 1),
+                  label_size=28)
+
+fp <- file.path(OUTPUT_DIR, "fig_illumina.png")
+png(fp, width=1000, height=1300)
+p_ab
+dev.off()
+```
+
+
+

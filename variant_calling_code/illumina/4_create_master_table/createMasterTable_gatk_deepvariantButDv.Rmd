@@ -1,0 +1,540 @@
+---
+title: "Create mater table for Illumina WTC-11 data"
+author: "Vladimir Souza"
+date: "5/12/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+# Introduction
+
+Create the master table for WTC-11 data.  
+
+Compare: DeepVariant and Clair3 combined with SNCR, flagCorrection or alone, and GATK with SNCR.  
+
+Nanopore RNA-seq raw sequencing data:  
+  * only primary alignments (secondary and supplementary alignments were filtered out);  
+  * duplicates not marked/removed.  
+
+sort-read:  
+  * VCF downloaded from Allen Institute;  
+  * only chromosomes chr1, chr2, ..., chr22, chrX, chrY;  
+  * intronic regions removed.  
+
+
+
+
+# Input variables
+
+```{r}
+### methods to validate
+# name of the methods to validate
+METHOD_NAMES <- c("dvWes_sncr", "dvWes_sncr_fc", "gatk")
+# name of the dataset used with the methods to validate
+METHOD_DATASET_NAME <- "illumina"
+# VCF files
+METHOD_VCF_FILES <- c(
+  "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/short_reads/files/variant_calling_from_short_reads/deepvariant/dv_sncr/deepvariant_calls_pass.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/short_reads/files/variant_calling_from_short_reads/deepvariant/dv_sncr_fc/deepvariant_calls_pass.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/short_reads/files/variant_calling_from_short_reads/gatk/short_reads_wtc11.recal_pass.vcf.gz"
+)
+# BAM of the data
+METHOD_BAM_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/ase_analysis/star_aln/GSE175048_Aligned.sortedByCoord.out_primary_readGroupAddedSameOrder.bam"
+### ground-truth
+# name
+TRUTH_NAME <- "allen"
+# name of the dataset used to generate the ground-truth
+TRUTH_DATASET_NAME <- "shortRead"
+# VCF file
+TRUTH_VCF_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth/3546dc62_AH77TTBBXX_DS-229105_GCCAAT_recalibrated_subsetChromosomes_pass.vcf.gz"
+# BAM file
+# downloaded by script /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/1_download_data/wtc11/not_filtered_ground_truth_vcf/wtc11_vcf.sh
+TRUTH_BAM_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth/84773251_trimmed.AH77TTBBXX_DS-229105_GCCAAT.sorted.rg.final.1.bam"
+### variables
+MAX_DIST_FROM_SPLICE_SITE <- 20
+THREADS <- 30
+GENOME_REF_FILE <- "/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta"
+```
+
+
+
+
+# libraries
+
+```{r}
+library(lrRNAseqBenchmark)
+library(GenomicAlignments)
+library(dplyr)
+library(sarlacc)
+library(snakecase)
+```
+
+
+
+
+# Create the master table
+
+## Initiate the master table
+
+Get variant positions and which method could call them.
+
+```{r}
+dat <- initiate_master_table(
+  METHOD_VCF_FILES[1],
+  METHOD_VCF_FILES[2],
+  METHOD_VCF_FILES[3],
+  TRUTH_VCF_FILE,
+  method_names=c(METHOD_NAMES, TRUTH_NAME)
+)
+```
+
+
+## Add QD tag from ground-truth VCF
+
+```{r}
+# dat <- add_info_tag_from_vcf(dat, "qd_allen", "QD", TRUTH_VCF_FILE)
+```
+
+
+## Add dp tag for the ground truth.
+
+```{r}
+# dat <- add_info_tag_from_vcf(dat, "dp_info_allen", "DP", TRUTH_VCF_FILE)
+```
+
+
+## Add QUAL tag from VCF
+
+```{r}
+method_names_tlc <- to_lower_camel_case(METHOD_NAMES)
+dat <- add_qual_from_vcf(dat, method_names_tlc[1], METHOD_VCF_FILES[1])
+dat <- add_qual_from_vcf(dat, method_names_tlc[2], METHOD_VCF_FILES[2])
+dat <- add_qual_from_vcf(dat, method_names_tlc[3], METHOD_VCF_FILES[3])
+```
+
+
+## get splice site positions from the BAM file and add columns about splice sites
+
+```{r}
+method_bam <- readGAlignments(METHOD_BAM_FILE)
+# splice_sites <- get_splice_sites_info(method_bam, THREADS)
+
+# # saveRDS(splice_sites, file="/home/vbarbo/project_2021/paper_analysis/secondary_analyses/short_reads/extra_files/splice_sites_illumina.rds")
+# splice_sites <- readRDS("/home/vbarbo/project_2021/paper_analysis/secondary_analyses/short_reads/extra_files/splice_sites_illumina.rds")
+# 
+# dat <- add_splice_site_info_to_master_table(
+#   dat,
+#   splice_sites,
+#   MAX_DIST_FROM_SPLICE_SITE
+# )
+```
+
+
+## Add the read coverage (from the BAM file) of each variant
+
+Add illumina read coverage.
+
+```{r}
+# method_coverage <- coverage(METHOD_BAM_FILE)
+# saveRDS(method_coverage, file="/home/vbarbo/project_2021/paper_analysis/secondary_analyses/short_reads/extra_files/method_coverage.rds")
+method_coverage <- readRDS("/home/vbarbo/project_2021/paper_analysis/secondary_analyses/short_reads/extra_files/method_coverage.rds")
+
+dat <- add_read_coverage_from_bam_to_master_table(
+  dat,
+  method_coverage,
+  METHOD_DATASET_NAME
+)
+```
+
+Add short-read coverage (ground truth).
+
+```{r}
+### get the coverage of the ground-truth short-read bam.
+### for this, we load the objects created in script 'lrRNAseqVariantCalling/isoseq_variant_calling_analysis_code/4_create_master_table/wtc11/mt_wtc11_allMethods_v7.Rmd
+### The object `truth_coverage_1` stores the coverage of chromosomes 1--12, and `truth_coverage_2` of 13--22 + chrX + chrY.
+truth_coverage_1 <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/truth_coverage_1_wtc11.rds")
+truth_coverage_2 <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/truth_coverage_2_wtc11.rds")
+
+
+### add short-read coverage to master table. must do it in two steps: first the chromosomes in truth_coverage_1 and lately the ones in truth_coverage_2
+dat_1 <- filter(dat, chrm %in% names(truth_coverage_1))
+dat_2 <- filter(dat, chrm %in% names(truth_coverage_2))
+dat_1 <- add_read_coverage_from_bam_to_master_table(
+  dat_1,
+  truth_coverage_1,
+  TRUTH_DATASET_NAME
+)
+dat_2 <- add_read_coverage_from_bam_to_master_table(
+  dat_2,
+  truth_coverage_2,
+  TRUTH_DATASET_NAME
+)
+dat <- rbind(dat_1, dat_2) %>% 
+  arrange(chrm, pos)
+```
+
+
+## Add the number of N-cigar reads per site
+
+```{r}
+dat <- add_number_of_n_cigar_reads_to_master_table(
+  dat, 
+  method_bam, 
+  METHOD_DATASET_NAME
+)
+```
+
+
+## Add column to classify the method calls (compare to the ground-truth)
+
+```{r}
+### method 1
+dat <- add_method_vs_truth_comparison_to_master_table(
+  dat,
+  METHOD_NAMES[1],
+  TRUTH_NAME
+)
+### method 2
+dat <- add_method_vs_truth_comparison_to_master_table(
+  dat,
+  METHOD_NAMES[2],
+  TRUTH_NAME
+)
+### method 3
+dat <- add_method_vs_truth_comparison_to_master_table(
+  dat,
+  METHOD_NAMES[3],
+  TRUTH_NAME
+)
+```
+
+
+## Add columns to inform the variant type according each method and the ground truth
+
+For the ground-truth
+
+```{r}
+### ground truth
+dat <- add_variant_type_to_master_table(dat, TRUTH_VCF_FILE, TRUTH_NAME)
+### methods
+dat <- add_variant_type_to_master_table(dat, METHOD_VCF_FILES[1],
+                                        METHOD_NAMES[1])
+dat <- add_variant_type_to_master_table(dat, METHOD_VCF_FILES[2],
+                                        METHOD_NAMES[2])
+dat <- add_variant_type_to_master_table(dat, METHOD_VCF_FILES[3],
+                                        METHOD_NAMES[3])
+```
+
+
+## Add columns to inform whether the variant is a indel or not (-1, 0, 1, or NA)
+
+* 1 = is indel
+* 0 = is not indel
+* -1 = non defined (heterozygous alternative) (truth's gt has priority over the method's)
+* NA = variant not calls by the method or the truth
+
+```{r}
+### truth
+dat <- is_indel_method(dat, TRUTH_NAME)
+
+### methods
+dat <- is_indel_method(dat, TRUTH_NAME, METHOD_NAMES[1])
+dat <- is_indel_method(dat, TRUTH_NAME, METHOD_NAMES[2])
+dat <- is_indel_method(dat, TRUTH_NAME, METHOD_NAMES[3])
+```
+
+
+## Add variant/sequencing_error dencity per variant
+
+```{r}
+### TRUTH_NAME
+dat <- add_variant_density_of_a_method(dat, 201, TRUTH_NAME)
+### all methods
+dat <- add_variant_density_of_a_method(dat, 201, METHOD_NAMES)
+```
+
+
+## add genotype
+
+```{r}
+dat <- add_format_tag_from_vcf(dat, TRUTH_NAME, "GT", TRUTH_VCF_FILE)
+dat <- add_format_tag_from_vcf(dat, METHOD_NAMES[1], "GT", METHOD_VCF_FILES[1])
+dat <- add_format_tag_from_vcf(dat, METHOD_NAMES[2], "GT", METHOD_VCF_FILES[2])
+dat <- add_format_tag_from_vcf(dat, METHOD_NAMES[3], "GT", METHOD_VCF_FILES[3])
+# sel_cols <- paste0( "gt_", c(TRUTH_NAME, METHOD_NAMES[c(3,7,8,9)]) )
+sel_cols <- paste0( "gt_", c(TRUTH_NAME, METHOD_NAMES) )
+k <- is.na( dat[,sel_cols] )
+dat[,sel_cols] [k] <- "0/0"
+```
+
+
+## add homopolymer length (from reference FASTA), but only for 0/1 and 1/1 genotypes and indels
+
+```{r}
+# # get all homopolymers of the reference genome
+# genome_ref <- readDNAStringSet(GENOME_REF_FILE)
+# homopolymers <- homopolymerFinder(genome_ref)
+# names(homopolymers) <- sub("(^chr[0-9]+|X|Y).*", "\\1", names(homopolymers))
+### load file with all homopolymers of the reference genome created in script /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/4_create_master_table/jurkat/mt_jurkat_allMethods_v7.Rmd
+homopolymers <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/homopolymers_GRCh38.p13_all_chr.rds")
+dat <- add_homopolymer_length_when_indels(dat, homopolymers)
+```
+
+
+## Take a look at the master table
+
+```{r}
+head(dat)
+dat_bk <- dat
+```
+
+
+## Save master table to a file
+
+```{r}
+mt_wtc11_gatk_dvBut_notFiltered <- dat
+saveRDS(mt_wtc11_gatk_dvBut_notFiltered, "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/short_reads/extra_files/master_tables/mt_wtc11_gatk_deepvariantButDv_notFiltered_v1.rds")
+```
+
+
+# Filtering master table
+
+Sites to keep:  
+* short-read variant density: x <= 3                (ignore positions)  
+* ignore intronic regions (isoSeq_coverage > 0)     (ignore positions)  
+* DeepVariant QUAL: x >= 15                         (remove method calling)  
+* short-read coverare : quantil 5% <= x <= 95%      (ignore positions)  
+
+```{r}
+# no filtering
+dat1 <- dat
+dim(dat1)
+
+k <- paste0(TRUTH_DATASET_NAME, "_coverage")
+truth_cover_quantiles <- quantile(dat1[,k], probs=c(.05, .95))
+
+# variant/sequence_error density -- filter using the ground truth
+k <- paste0("variantDensity_", TRUTH_NAME)
+k <- !( dat1[,k] > 3 )
+dat1 <- dat1[k,]
+dim(dat1)
+
+# ignore intronic regions (iso-seq coverage equal to zero)
+k <- paste0(METHOD_DATASET_NAME, "_coverage")
+k <- dat1[,k] > 0
+dat1 <- dat1[k,]
+dim(dat1)
+
+# ignore regions based on short-read (ground-truth) coverage quantiles: keep 5% <= x <= 95%
+k <- paste0(TRUTH_DATASET_NAME, "_coverage")
+k <- dat1[,k] >= truth_cover_quantiles[1] &
+  dat1[,k] <= truth_cover_quantiles[2]
+dat1 <- dat1[k,]
+dim(dat1)
+```
+
+see QUAL distribution for TPs and FPs
+
+```{r}
+# dat1 <- readRDS("/home/vbarbo/project_2021/paper_analysis/secondary_analyses/nanopore/extra_files/master_tables/mt_wtc11_clairPileupMerge_filtered_v1.rds")
+
+library(ggplot2)
+
+
+#### deepvariant
+png("~/distribution_qual_illumina_2pass_wtc11_dvWesSncr.png", width=800)
+ggplot(dat1, aes(x=qual_dvWesSncr, fill=dvWes_sncr_classification)) +
+  geom_histogram(alpha=.5, binwidth=1, position = 'identity') +
+  geom_vline(xintercept=c(5,10,15))
+dev.off()
+
+png("~/distribution_qual_illumina_2pass_wtc11_dvWesSncrFc.png", width=800)
+ggplot(dat1, aes(x=qual_dvWesSncrFc, fill=dvWes_sncr_fc_classification)) +
+  geom_histogram(alpha=.5, binwidth=1, position = 'identity') +
+  geom_vline(xintercept=c(5,10,15))
+dev.off()
+
+
+#### gatk
+png("~/distribution_qual_illumina_2pass_wtc11_gatk.png", width=800)
+ggplot(dat1, aes(x=qual_gatk, fill=gatk_classification)) +
+  geom_histogram(alpha=.5, binwidth=5, position = 'identity') +
+  xlim(0,250)
+  # geom_vline(xintercept=c(5,10,15))
+dev.off()
+
+############## we can filter by qual when using deepvariant
+```
+
+```{r}
+# Filter out DeepVariant calls by QUAL -- but keep the position
+# dvWes_sncr
+k <- which( dat1$qual_dvWesSncr < 15 )
+dat1$in_dvWes_sncr[k] <- 0
+dat1 <- add_method_vs_truth_comparison_to_master_table(
+  dat1,
+  METHOD_NAMES[1],
+  TRUTH_NAME,
+  replace_column=TRUE
+)
+# dvWes_sncr_fc
+k <- which( dat1$qual_dvWesSncrFc < 15 )
+dat1$in_dvWes_sncr_fc[k] <- 0
+dat1 <- add_method_vs_truth_comparison_to_master_table(
+  dat1,
+  METHOD_NAMES[2],
+  TRUTH_NAME,
+  replace_column=TRUE
+)
+```
+
+save filtered master table
+
+```{r}
+mt_wtc11_gatk_dvBut_filtered <- dat1
+saveRDS(mt_wtc11_gatk_dvBut_filtered, "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/short_reads/extra_files/master_tables/mt_wtc11_gatk_deepvariantButDv_filtered_v1.rds")
+```
+
+
+look at FP deletions from GATK
+
+```{r}
+### libraries
+library(vcfR)
+library(ggplot2)
+
+### load gatk vcf file
+k <- METHOD_NAMES == "gatk"
+stopifnot( any(k) )
+gatk_vcf <- read.vcfR(METHOD_VCF_FILES[k])
+gatk_name <- METHOD_NAMES[k]
+
+# add alleles and their lengths to the master table
+gatk_pos_var <- as.data.frame(gatk_vcf@fix) %>% 
+  select(CHROM, POS, REF, ALT)
+dat2 <- merge(dat1, gatk_pos_var, by.x=c("chrm", "pos"), by.y=c("CHROM", "POS"),
+              all.x=TRUE)
+dat2 <- mutate(dat2, ref_len=nchar(REF), alt_len=nchar(ALT))
+
+# give length 0 to NAs
+dat2$ref_len[ is.na(dat2$ref_len) ] <- 0
+dat2$alt_len[ is.na(dat2$alt_len) ] <- 0
+
+# give length -1 to het alt
+dat2$alt_len[ grep(",", dat2$ALT) ] <- -1
+
+# is it deletion
+dat2$is_del <- dat2$ref_len>1 & dat2$alt_len==1
+
+# plot histogram of deletion lengths separated between FPs and TPs
+dat_del <- dat2[dat2$is_del,]
+gatk_class <- paste0(gatk_name, "_classification")
+dat_del[,k] <- droplevels(dat_del[,k])
+dat_del$deletion_length <- dat_del$ref_len-1
+png("~/distribution_illumina_gatk_deletions_fp_tp.png", width=800)
+ggplot(dat_del, aes_string(x="deletion_length", fill=gatk_class)) +
+  geom_histogram(alpha=.5, binwidth=5, position = 'identity') +
+  NULL
+dev.off()
+################## remove deletions called by gatk that are longer than 50 bp
+```
+
+remove long deletions callled by gatk.
+
+```{r}
+MAX_GATK_DEL_LEN <- 50
+
+# remove long deletions from gatk's calls
+k <- dat2$is_del & dat2$ref_len >= MAX_GATK_DEL_LEN
+j <- paste0("in_", gatk_name)
+dat1[,j] [k] <- 0
+dat1 <- add_method_vs_truth_comparison_to_master_table(
+  dat1,
+  gatk_name,
+  TRUTH_NAME,
+  replace_column=TRUE
+)
+```
+
+save master table also filtered by gatk deletions lengths
+
+```{r}
+saveRDS(dat1, "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/short_reads/extra_files/master_tables/mt_wtc11_gatk_deepvariantButDv_filtered_v2_removeGatkLongDeletions.rds")
+```
+
+
+look at FP insertions from GATK
+
+```{r}
+### libraries
+library(vcfR)
+library(ggplot2)
+
+### load gatk vcf file
+k <- METHOD_NAMES == "gatk"
+stopifnot( any(k) )
+gatk_vcf <- read.vcfR(METHOD_VCF_FILES[k])
+gatk_name <- METHOD_NAMES[k]
+
+# add alleles and their lengths to the master table
+gatk_pos_var <- as.data.frame(gatk_vcf@fix) %>% 
+  select(CHROM, POS, REF, ALT)
+dat2 <- merge(dat1, gatk_pos_var, by.x=c("chrm", "pos"), by.y=c("CHROM", "POS"),
+              all.x=TRUE)
+dat2 <- mutate(dat2, ref_len=nchar(REF), alt_len=nchar(ALT))
+
+# give length 0 to NAs
+dat2$ref_len[ is.na(dat2$ref_len) ] <- 0
+dat2$alt_len[ is.na(dat2$alt_len) ] <- 0
+
+# give length -1 to het alt
+dat2$alt_len[ grep(",", dat2$ALT) ] <- -1
+
+# is it insertion
+dat2$is_ins <- dat2$ref_len==1 & dat2$alt_len>1
+
+# plot histogram of insertion lengths separated between FPs and TPs
+dat_ins <- dat2[dat2$is_ins,]
+gatk_class <- paste0(gatk_name, "_classification")
+dat_ins[,k] <- droplevels(dat_ins[,k])
+dat_ins$insertion_length <- dat_ins$alt_len-1
+png("~/distribution_illumina_gatk_insertion_fp_tp.png", width=800)
+ggplot(dat_ins, aes_string(x="insertion_length", fill=gatk_class)) +
+  geom_histogram(alpha=.5, binwidth=5, position = 'identity') +
+  geom_vline(xintercept=30) +
+  NULL
+dev.off()
+################## remove deletions called by gatk that are longer than 50 bp
+```
+
+remove long deletions callled by gatk.
+
+```{r}
+MAX_GATK_INS_LEN <- 30
+
+# remove long insertions from gatk's calls
+k <- dat2$is_ins & dat2$alt_len >= MAX_GATK_INS_LEN
+j <- paste0("in_", gatk_name)
+dat1[,j] [k] <- 0
+dat1 <- add_method_vs_truth_comparison_to_master_table(
+  dat1,
+  gatk_name,
+  TRUTH_NAME,
+  replace_column=TRUE
+)
+```
+
+save master table also filtered by gatk deletions and insertion lengths
+
+```{r}
+saveRDS(dat1, "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/short_reads/extra_files/master_tables/mt_wtc11_gatk_deepvariantButDv_filtered_v2_removeGatkLongDeletionsInsertions.rds")
+```
+
+
