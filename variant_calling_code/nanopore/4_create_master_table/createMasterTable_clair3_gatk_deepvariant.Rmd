@@ -1,0 +1,535 @@
+---
+title: "Create mater table for nanopore WTC-11 data ENCFF961HLO"
+author: "Vladimir Souza"
+date: "5/12/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+# Introduction
+
+Create the master table for WTC-11 data.  
+
+Compare: DeepVariant and Clair3 combined with SNCR, flagCorrection or alone, and GATK with SNCR.  
+
+Nanopore RNA-seq raw sequencing data:  
+  * only primary alignments (secondary and supplementary alignments were filtered out);  
+  * duplicates not marked/removed.  
+
+sort-read:  
+  * VCF downloaded from Allen Institute;  
+  * only chromosomes chr1, chr2, ..., chr22, chrX, chrY;  
+  * intronic regions removed.  
+
+
+
+
+# Input variables
+
+```{r}
+### methods to validate
+# name of the methods to validate
+METHOD_NAMES <- c("c3", "c3_sncr", "c3_sncr_fc", "gatk",
+                  "dv", "dv_sncr", "dv_sncr_fc")
+# name of the dataset used with the methods to validate
+METHOD_DATASET_NAME <- "Nanopore"
+# VCF files
+METHOD_VCF_FILES <- c(
+  "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/nanopore/files/ENCFF961HLO/variant_calling_from_nanopore/clair3/c3/pileup_pass.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/nanopore/files/ENCFF961HLO/variant_calling_from_nanopore/clair3/c3_sncr/pileup_pass.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/nanopore/files/ENCFF961HLO/variant_calling_from_nanopore/clair3/c3_sncr_fc/pileup_pass.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/nanopore/files/ENCFF961HLO/variant_calling_from_nanopore/gatk/nanopore_wtc11.recal_pass.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/nanopore/files/ENCFF961HLO/variant_calling_from_nanopore/deepvariant/dv/deepvariant_calls_pass.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/nanopore/files/ENCFF961HLO/variant_calling_from_nanopore/deepvariant/dv_sncr/deepvariant_calls_pass.vcf.gz",
+  "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/nanopore/files/ENCFF961HLO/variant_calling_from_nanopore/deepvariant/dv_sncr_fc/deepvariant_calls_pass.vcf.gz"
+)
+# BAM of the data
+METHOD_BAM_FILE <- "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/nanopore/files/ENCFF961HLO/data_manipulation/aln_s.bam"
+### ground-truth
+# name
+TRUTH_NAME <- "allen"
+# name of the dataset used to generate the ground-truth
+TRUTH_DATASET_NAME <- "shortRead"
+# VCF file
+TRUTH_VCF_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth/3546dc62_AH77TTBBXX_DS-229105_GCCAAT_recalibrated_subsetChromosomes_pass.vcf.gz"
+# BAM file
+# downloaded by script /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/1_download_data/wtc11/not_filtered_ground_truth_vcf/wtc11_vcf.sh
+TRUTH_BAM_FILE <- "/home/vbarbo/project_2021/paper_analysis/wtc11/ground_truth/84773251_trimmed.AH77TTBBXX_DS-229105_GCCAAT.sorted.rg.final.1.bam"
+### variables
+MAX_DIST_FROM_SPLICE_SITE <- 20
+THREADS <- 30
+GENOME_REF_FILE <- "/home/vbarbo/project_2021/paper_analysis/reference/genome/GRCh38.p13_all_chr.fasta"
+```
+
+
+
+
+# libraries
+
+```{r}
+library(lrRNAseqBenchmark)
+library(GenomicAlignments)
+library(dplyr)
+library(sarlacc)
+library(snakecase)
+```
+
+
+
+
+# Create the master table
+
+## Initiate the master table
+
+Get variant positions and which method could call them.
+
+```{r}
+dat <- initiate_master_table(
+  METHOD_VCF_FILES[1],
+  METHOD_VCF_FILES[2],
+  METHOD_VCF_FILES[3],
+  METHOD_VCF_FILES[4],
+  METHOD_VCF_FILES[5],
+  METHOD_VCF_FILES[6],
+  METHOD_VCF_FILES[7],
+  TRUTH_VCF_FILE,
+  method_names=c(METHOD_NAMES, TRUTH_NAME)
+)
+```
+
+
+## Add QD tag from ground-truth VCF
+
+```{r}
+# dat <- add_info_tag_from_vcf(dat, "qd_allen", "QD", TRUTH_VCF_FILE)
+```
+
+
+## Add dp tag for the ground truth.
+
+```{r}
+# dat <- add_info_tag_from_vcf(dat, "dp_info_allen", "DP", TRUTH_VCF_FILE)
+```
+
+
+## Add QUAL tag from VCF
+
+```{r}
+method_names_tlc <- to_lower_camel_case(METHOD_NAMES)
+dat <- add_qual_from_vcf(dat, method_names_tlc[1], METHOD_VCF_FILES[1])
+dat <- add_qual_from_vcf(dat, method_names_tlc[2], METHOD_VCF_FILES[2])
+dat <- add_qual_from_vcf(dat, method_names_tlc[3], METHOD_VCF_FILES[3])
+dat <- add_qual_from_vcf(dat, method_names_tlc[4], METHOD_VCF_FILES[4])
+dat <- add_qual_from_vcf(dat, method_names_tlc[5], METHOD_VCF_FILES[5])
+dat <- add_qual_from_vcf(dat, method_names_tlc[6], METHOD_VCF_FILES[6])
+dat <- add_qual_from_vcf(dat, method_names_tlc[7], METHOD_VCF_FILES[7])
+```
+
+
+## get splice site positions from the BAM file and add columns about splice sites
+
+```{r}
+method_bam <- readGAlignments(METHOD_BAM_FILE)
+# splice_sites <- get_splice_sites_info(method_bam, THREADS)
+
+# saveRDS(splice_sites, file="/home/vbarbo/project_2021/paper_analysis/secondary_analyses/nanopore/extra_files/splice_sites_nanopore_wtc11_ENCFF961HLO.rds")
+splice_sites <- readRDS("/home/vbarbo/project_2021/paper_analysis/secondary_analyses/nanopore/extra_files/ENCFF961HLO/splice_sites_nanopore_wtc11_ENCFF961HLO.rds")
+
+dat <- add_splice_site_info_to_master_table(
+  dat,
+  splice_sites,
+  MAX_DIST_FROM_SPLICE_SITE
+)
+```
+
+
+## Add the read coverage (from the BAM file) of each variant
+
+Add iso-seq read coverage.
+
+```{r}
+method_coverage <- coverage(METHOD_BAM_FILE)
+dat <- add_read_coverage_from_bam_to_master_table(
+  dat,
+  method_coverage,
+  METHOD_DATASET_NAME
+)
+```
+
+Add short-read coverage (ground truth).
+
+```{r}
+### get the coverage of the ground-truth short-read bam.
+### for this, we load the objects created in script 'lrRNAseqVariantCalling/isoseq_variant_calling_analysis_code/4_create_master_table/wtc11/mt_wtc11_allMethods_v7.Rmd
+### The object `truth_coverage_1` stores the coverage of chromosomes 1--12, and `truth_coverage_2` of 13--22 + chrX + chrY.
+truth_coverage_1 <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/truth_coverage_1_wtc11.rds")
+truth_coverage_2 <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/truth_coverage_2_wtc11.rds")
+
+
+### add short-read coverage to master table. must do it in two steps: first the chromosomes in truth_coverage_1 and lately the ones in truth_coverage_2
+dat_1 <- filter(dat, chrm %in% names(truth_coverage_1))
+dat_2 <- filter(dat, chrm %in% names(truth_coverage_2))
+dat_1 <- add_read_coverage_from_bam_to_master_table(
+  dat_1,
+  truth_coverage_1,
+  TRUTH_DATASET_NAME
+)
+dat_2 <- add_read_coverage_from_bam_to_master_table(
+  dat_2,
+  truth_coverage_2,
+  TRUTH_DATASET_NAME
+)
+dat <- rbind(dat_1, dat_2) %>% 
+  arrange(chrm, pos)
+```
+
+
+## Add the number of N-cigar reads per site
+
+```{r}
+dat <- add_number_of_n_cigar_reads_to_master_table(
+  dat, 
+  method_bam, 
+  METHOD_DATASET_NAME
+)
+```
+
+
+## Add column to classify the method calls (compare to the ground-truth)
+
+```{r}
+### method 1
+dat <- add_method_vs_truth_comparison_to_master_table(
+  dat,
+  METHOD_NAMES[1],
+  TRUTH_NAME
+)
+### method 2
+dat <- add_method_vs_truth_comparison_to_master_table(
+  dat,
+  METHOD_NAMES[2],
+  TRUTH_NAME
+)
+### method 3
+dat <- add_method_vs_truth_comparison_to_master_table(
+  dat,
+  METHOD_NAMES[3],
+  TRUTH_NAME
+)
+### method 4
+dat <- add_method_vs_truth_comparison_to_master_table(
+  dat,
+  METHOD_NAMES[4],
+  TRUTH_NAME
+)
+### method 5
+dat <- add_method_vs_truth_comparison_to_master_table(
+  dat,
+  METHOD_NAMES[5],
+  TRUTH_NAME
+)
+### method 6
+dat <- add_method_vs_truth_comparison_to_master_table(
+  dat,
+  METHOD_NAMES[6],
+  TRUTH_NAME
+)
+### method 7
+dat <- add_method_vs_truth_comparison_to_master_table(
+  dat,
+  METHOD_NAMES[7],
+  TRUTH_NAME
+)
+```
+
+
+## Add columns to inform the variant type according each method and the ground truth
+
+For the ground-truth
+
+```{r}
+### ground truth
+dat <- add_variant_type_to_master_table(dat, TRUTH_VCF_FILE, TRUTH_NAME)
+### methods
+dat <- add_variant_type_to_master_table(dat, METHOD_VCF_FILES[1],
+                                        METHOD_NAMES[1])
+dat <- add_variant_type_to_master_table(dat, METHOD_VCF_FILES[2],
+                                        METHOD_NAMES[2])
+dat <- add_variant_type_to_master_table(dat, METHOD_VCF_FILES[3],
+                                        METHOD_NAMES[3])
+dat <- add_variant_type_to_master_table(dat, METHOD_VCF_FILES[4],
+                                        METHOD_NAMES[4])
+dat <- add_variant_type_to_master_table(dat, METHOD_VCF_FILES[5],
+                                        METHOD_NAMES[5])
+dat <- add_variant_type_to_master_table(dat, METHOD_VCF_FILES[6],
+                                        METHOD_NAMES[6])
+dat <- add_variant_type_to_master_table(dat, METHOD_VCF_FILES[7],
+                                        METHOD_NAMES[7])
+```
+
+
+## Add columns to inform whether the variant is a indel or not (-1, 0, 1, or NA)
+
+* 1 = is indel
+* 0 = is not indel
+* -1 = non defined (heterozygous alternative) (truth's gt has priority over the method's)
+* NA = variant not calls by the method or the truth
+
+```{r}
+### truth
+dat <- is_indel_method(dat, TRUTH_NAME)
+
+### methods
+dat <- is_indel_method(dat, TRUTH_NAME, METHOD_NAMES[1])
+dat <- is_indel_method(dat, TRUTH_NAME, METHOD_NAMES[2])
+dat <- is_indel_method(dat, TRUTH_NAME, METHOD_NAMES[3])
+dat <- is_indel_method(dat, TRUTH_NAME, METHOD_NAMES[4])
+dat <- is_indel_method(dat, TRUTH_NAME, METHOD_NAMES[5])
+dat <- is_indel_method(dat, TRUTH_NAME, METHOD_NAMES[6])
+dat <- is_indel_method(dat, TRUTH_NAME, METHOD_NAMES[7])
+```
+
+
+## Add variant/sequencing_error dencity per variant
+
+```{r}
+### TRUTH_NAME
+dat <- add_variant_density_of_a_method(dat, 201, TRUTH_NAME)
+### all methods
+dat <- add_variant_density_of_a_method(dat, 201, METHOD_NAMES)
+
+dat <- add_variant_density_of_a_method(dat, 201, METHOD_NAMES[c(2,3,7)] )
+dat <- add_variant_density_of_a_method(dat, 201, METHOD_NAMES[c(2,3,5)] )
+dat <- add_variant_density_of_a_method(dat, 201, METHOD_NAMES[c(2,3,4,7)] )
+dat <- add_variant_density_of_a_method(dat, 201, METHOD_NAMES[c(2,3,4,5)] )
+```
+
+
+
+
+
+
+
+
+
+```{r}
+dat_beforeAddingGenotypes <- dat
+saveRDS(dat_beforeAddingGenotypes,
+        file="~/keita/dat_beforeAddingGenotypes.r")
+```
+
+
+
+
+
+
+
+
+
+
+<!-- dat_bk2 <- dat -->
+<!-- dat <- dat_bk2 -->
+
+## add genotype
+
+```{r}
+dat <- add_format_tag_from_vcf(dat, TRUTH_NAME, "GT", TRUTH_VCF_FILE)
+dat <- add_format_tag_from_vcf(dat, METHOD_NAMES[1], "GT", METHOD_VCF_FILES[1])
+dat <- add_format_tag_from_vcf(dat, METHOD_NAMES[2], "GT", METHOD_VCF_FILES[2])
+dat <- add_format_tag_from_vcf(dat, METHOD_NAMES[3], "GT", METHOD_VCF_FILES[3])
+dat <- add_format_tag_from_vcf(dat, METHOD_NAMES[4], "GT", METHOD_VCF_FILES[4])
+dat <- add_format_tag_from_vcf(dat, METHOD_NAMES[5], "GT", METHOD_VCF_FILES[5])
+dat <- add_format_tag_from_vcf(dat, METHOD_NAMES[6], "GT", METHOD_VCF_FILES[6])
+dat <- add_format_tag_from_vcf(dat, METHOD_NAMES[7], "GT", METHOD_VCF_FILES[7])
+# sel_cols <- paste0( "gt_", c(TRUTH_NAME, METHOD_NAMES[c(3,7,8,9)]) )
+sel_cols <- paste0( "gt_", c(TRUTH_NAME, METHOD_NAMES) )
+k <- is.na( dat[,sel_cols] )
+dat[,sel_cols] [k] <- "0/0"
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+## add homopolymer length (from reference FASTA), but only for 0/1 and 1/1 genotypes and indels
+
+```{r}
+# # get all homopolymers of the reference genome
+# genome_ref <- readDNAStringSet(GENOME_REF_FILE)
+# homopolymers <- homopolymerFinder(genome_ref)
+# names(homopolymers) <- sub("(^chr[0-9]+|X|Y).*", "\\1", names(homopolymers))
+### load file with all homopolymers of the reference genome created in script /home/vbarbo/project_2021/projects/lrRNAseqVariantCalling/4_create_master_table/jurkat/mt_jurkat_allMethods_v7.Rmd
+homopolymers <- readRDS("/home/vbarbo/project_2021/paper_analysis/extra_files/homopolymers_GRCh38.p13_all_chr.rds")
+dat <- add_homopolymer_length_when_indels(dat, homopolymers)
+```
+
+
+## Take a look at the master table
+
+```{r}
+head(dat)
+dat_bk <- dat
+```
+
+
+## Save master table to a file
+
+```{r}
+mt_wtc11_clair_gatk_dv_notFiltered <- dat
+saveRDS(mt_wtc11_clair_gatk_dv_notFiltered, "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/nanopore/extra_files/ENCFF961HLO/clair3_gatk_deepvariant/master_tables/mt_wtc11_clair_gatk_dv_notFiltered_v1.rds")
+```
+
+
+
+
+# Filtering master table
+
+Sites to keep:  
+* short-read variant density: x <= 3                (ignore positions)  
+* ignore intronic regions (isoSeq_coverage > 0)     (ignore positions)  
+* DeepVariant QUAL: x >= 15                         (remove method calling)  
+* short-read coverare : quantil 5% <= x <= 95%      (ignore positions)  
+
+```{r}
+# no filtering
+dat1 <- dat
+dim(dat1)
+
+k <- paste0(TRUTH_DATASET_NAME, "_coverage")
+truth_cover_quantiles <- quantile(dat1[,k], probs=c(.05, .95))
+
+# variant/sequence_error density -- filter using the ground truth
+k <- paste0("variantDensity_", TRUTH_NAME)
+k <- !( dat1[,k] > 3 )
+dat1 <- dat1[k,]
+dim(dat1)
+
+# ignore intronic regions (iso-seq coverage equal to zero)
+k <- paste0(METHOD_DATASET_NAME, "_coverage")
+k <- dat1[,k] > 0
+dat1 <- dat1[k,]
+dim(dat1)
+
+# ignore regions based on short-read (ground-truth) coverage quantiles: keep 5% <= x <= 95%
+k <- paste0(TRUTH_DATASET_NAME, "_coverage")
+k <- dat1[,k] >= truth_cover_quantiles[1] &
+  dat1[,k] <= truth_cover_quantiles[2]
+dat1 <- dat1[k,]
+dim(dat1)
+
+# # Filter out DeepVariant calls by QUAL -- but keep the position
+# # dv
+# k <- which( dat1$qual_dv < 10 )
+# dat1$in_dv[k] <- 0
+# dat1 <- add_method_vs_truth_comparison_to_master_table(
+#   dat1,
+#   METHOD_NAMES[5],
+#   TRUTH_NAME,
+#   replace_column=TRUE
+# )
+# # dv_sncr
+# k <- which( dat1$qual_dvSncr < 10 )
+# dat1$in_dv_sncr[k] <- 0
+# dat1 <- add_method_vs_truth_comparison_to_master_table(
+#   dat1,
+#   METHOD_NAMES[6],
+#   TRUTH_NAME,
+#   replace_column=TRUE
+# )
+# # dv_sncr_fc
+# k <- which( dat1$qual_dvSncrFc < 10 )
+# dat1$in_dv_sncr_fc[k] <- 0
+# dat1 <- add_method_vs_truth_comparison_to_master_table(
+#   dat1,
+#   METHOD_NAMES[7],
+#   TRUTH_NAME,
+#   replace_column=TRUE
+# )
+
+### don't filter by DeepVariant QUAL
+
+### don't filter by Clair3 QUAL
+```
+
+save filtered master table
+
+```{r}
+mt_wtc11_clair_gatk_dv_filtered <- dat1
+saveRDS(mt_wtc11_clair_gatk_dv_filtered, "/home/vbarbo/project_2021/paper_analysis/secondary_analyses/nanopore/extra_files/ENCFF961HLO/clair3_gatk_deepvariant/master_tables/mt_wtc11_clair_gatk_dv_filtered_v1.rds")
+```
+
+
+
+### see clair3 QUAL distribution for TPs and FPs
+
+```{r}
+dat1 <- readRDS("/home/vbarbo/project_2021/paper_analysis/secondary_analyses/nanopore/extra_files/master_tables/mt_wtc11_clairPileupMerge_filtered_v1.rds")
+
+library(ggplot2)
+
+png("~/distribution_qual_nanopore_ENCFF961HLO_wtc11_c3.png", width=800)
+ggplot(dat1, aes(x=qual_c3, fill=c3_classification)) +
+  geom_histogram(alpha=.5, binwidth=1, position = 'identity') +
+  geom_vline(xintercept=c(5,10,15))
+dev.off()
+
+png("~/distribution_qual_nanopore_ENCFF961HLO_wtc11_c3Sncr.png", width=800)
+ggplot(dat1, aes(x=qual_c3Sncr, fill=c3_sncr_classification)) +
+  geom_histogram(alpha=.5, binwidth=1, position = 'identity') +
+  geom_vline(xintercept=c(5,10,15))
+dev.off()
+
+png("~/distribution_qual_nanopore_ENCFF961HLO_wtc11_c3SncrFc.png", width=800)
+ggplot(dat1, aes(x=qual_c3SncrFc, fill=c3_sncr_fc_classification)) +
+  geom_histogram(alpha=.5, binwidth=1, position = 'identity') +
+  geom_vline(xintercept=c(5,10,15))
+dev.off()
+
+############## we can filter by qual when using p-m-dv
+```
+
+
+
+
+### see DeepVariant QUAL distribution for TPs and FPs (Iso-Seq data)
+
+```{r}
+dat1 <- readRDS("....../home/vbarbo/project_2021/paper_analysis/extra_files/master_tables/mt_wtc11_allMethods_notFiltered_v7.rds")
+
+library(ggplot2)
+
+png("~/distribution_qual_nanopore_ENCFF961HLO_wtc11_dv_wesModel.png", width=800)
+ggplot(dat1, aes(x=qual_dv, fill=dv_classification)) +
+  geom_histogram(alpha=.5, binwidth=1, position = 'identity') +
+  geom_vline(xintercept=c(5,10,15))
+dev.off()
+
+png("~/distribution_qual_nanopore_ENCFF961HLO_wtc11_dvS_wesModel.png", width=800)
+ggplot(dat1, aes(x=qual_dvSncr, fill=dv_sncr_classification)) +
+  geom_histogram(alpha=.5, binwidth=1, position = 'identity') +
+  geom_vline(xintercept=c(5,10,15))
+dev.off()
+
+png("~/distribution_qual_nanopore_ENCFF961HLO_wtc11_dvSFc_wesModel.png", width=800)
+ggplot(dat1, aes(x=qual_dvSncrFc, fill=dv_sncr_fc_classification)) +
+  geom_histogram(alpha=.5, binwidth=1, position = 'identity') +
+  geom_vline(xintercept=c(5,10,15))
+dev.off()
+
+################### using nanopore, filtering deepvariant calls by qual is not good.
+```
