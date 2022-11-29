@@ -107,7 +107,7 @@ Compare methods per ranges of read coverage.
 ```{r}
 experiment_names <- c("WTC-11")
 method_names <- c("dvWes_sncr", "dvWes_sncr_fc", "gatk")
-output_method_names <- c("SNCR+DeepVariantWES", "SNCR+fC+DeepVariantWES", "GATK")
+output_method_names <- c("SNCR+DeepVariant", "SNCR+fC+DeepVariant", "SNCR+GATK")
 coverage_ranges <- data.frame( s=c(3, 10, 30,  80, 200, 400, 1000),
                                e=c(5, 15, 40, 100, 250, 500, 1500) )
 
@@ -216,8 +216,8 @@ Upset plot to compare the best methods
 
 ```{r}
 method_names <- c("dvWes_sncr", "dvWes_sncr_fc", "gatk")
-output_method_names <- c("SNCR+DeepVariantWES", "SNCR+fC+DeepVariantWES",
-                         "GATK")
+output_method_names <- c("SNCR+DeepVariant", "SNCR+fC+DeepVariant",
+                         "SNCR+GATK")
 
 
 ####################
