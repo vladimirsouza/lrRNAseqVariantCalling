@@ -1,7 +1,7 @@
 # lrRNAseqVariantCalling
 
 
-This repository contains all the code used for the analyses in the manuscript *Transformation of alignment files improves the performance of variant callers for long-read RNA sequencing data* ([preprint](https://www.biorxiv.org/content/10.1101/2022.02.08.479579v4)). The order in which the scripts were run is indicated by numbers in their names or folders.
+This repository contains all the code used for the analyses in the manuscript *Transformation of alignment files improves the performance of variant callers for long-read RNA sequencing data* ([paper link](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-023-02923-y)). The order in which the scripts were run is indicated by numbers in their names or folders.
 
 Here, we also make the `flagCorrection` tool available, a tool developed by us to manipulate BAM files output by GATK's `SplitNCigarReads` function to make them adequate for deep learning-based variant callers.
 
